@@ -6,6 +6,10 @@
 build/
 **/build/
 
+# Android native build (CMake/ninja intermediates)
+.cxx/
+**/.cxx/
+
 # Kotlin/Native, KMP
 .kotlin/
 

@@ -1,6 +1,7 @@
 package app.skerry.android
 
 import android.os.Bundle
+import android.os.Environment
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import app.skerry.shared.ai.local.IsolatedLlmRuntime
 import app.skerry.shared.ai.local.LocalModelStore
 import app.skerry.shared.ai.local.ServiceLlmHostLauncher
+import app.skerry.shared.local.LocalShellEnvironment
 import app.skerry.shared.ai.local.ModelDownloader
 import app.skerry.shared.host.VaultHostStore
 import app.skerry.shared.ssh.FileHostKeyMismatchStore
@@ -144,6 +146,11 @@ class MainActivity : FragmentActivity() {
         runBlocking { initializeVaultCrypto() }
 
         val deps = buildDependencies()
+        // Local shell (ConnectionType.LOCAL): HOME is the app's writable private dir; the shell opens
+        // at the shared storage root so it lands like a file manager, not in the sandbox (the shared
+        // LocalShell has no Context to find these itself).
+        LocalShellEnvironment.homeDir = filesDir.path
+        LocalShellEnvironment.startDir = Environment.getExternalStorageDirectory()?.path
         // Layout state with persisted collapsed host groups: the set of names survives restart.
         // Created once here and held by composition.
         val dir = filesDir

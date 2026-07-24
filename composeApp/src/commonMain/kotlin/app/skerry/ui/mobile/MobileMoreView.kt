@@ -79,7 +79,9 @@ import app.skerry.ui.generated.resources.more_biometric_verify_subtitle
 import app.skerry.ui.generated.resources.more_biometric_verify_title
 import app.skerry.ui.generated.resources.more_known_hosts
 import app.skerry.ui.generated.resources.more_lock
+import app.skerry.ui.generated.resources.more_local_terminal
 import app.skerry.ui.generated.resources.more_port_forwarding
+import app.skerry.ui.generated.resources.local_shell_name
 import app.skerry.ui.generated.resources.more_sync
 import app.skerry.ui.generated.resources.more_sync_error
 import app.skerry.ui.generated.resources.more_sync_linked_locked
@@ -136,7 +138,9 @@ import app.skerry.ui.settings.ChangeAccountPasswordDialog
 import app.skerry.ui.settings.ChangeMasterPasswordDialog
 import app.skerry.ui.generated.resources.term_player_open
 import app.skerry.ui.generated.resources.conn_import_action
+import app.skerry.ui.app.LocalConnectHost
 import app.skerry.ui.app.LocalHosts
+import app.skerry.ui.host.localTerminalHost
 import app.skerry.ui.host.pickAndParseSshConfig
 import app.skerry.ui.terminal.openCastFile
 import androidx.compose.runtime.rememberCoroutineScope
@@ -213,6 +217,15 @@ fun MobileMoreScreen(state: MobileDesignState, onLock: (() -> Unit)?) {
             // "Security" section: master password, biometrics, auto-lock, event log. Live path is
             // behind the gate (vault present); in preview the row is inert (nothing to configure without a vault).
             MoreRow("shield_lock", Skerry.colors.cyanBright, stringResource(Res.string.settings_security_title), null, Skerry.colors.dim, onClick = if (preview) null else { -> state.push(MobileRoute.Security) })
+            // Local terminal: opens a shell on this device (ConnectionType.LOCAL) — a low-frequency
+            // feature, so it lives here rather than taking a bottom-bar slot. Live path only (a
+            // session controller must be present to open it); the default shell, no auth prompt.
+            val connect = LocalConnectHost.current
+            val localName = stringResource(Res.string.local_shell_name)
+            MoreRow(
+                "terminal", Skerry.colors.cyanBright, stringResource(Res.string.more_local_terminal), null, Skerry.colors.dim,
+                onClick = if (preview) null else { -> connect(localTerminalHost("", localName)) },
+            )
             // Recording player: opens a .cast picker. Lives here because watching a recording needs no
             // session — the terminal menu would hide it behind a live connection.
             val playerScope = rememberCoroutineScope()

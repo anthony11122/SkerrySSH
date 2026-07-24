@@ -27,7 +27,19 @@ android {
         // Local AI (Llamatik/llama.cpp): the AAR carries natives for four ABIs (~52 MB unpacked).
         // The project's real Android devices are arm64; the other ABIs are dead weight in the APK.
         ndk { abiFilters += "arm64-v8a" }
+        // Local shell PTY helper (libskerrypty.so, src/main/cpp): built for the arm64 filter above.
+        externalNativeBuild { cmake { } }
     }
+    // forkpty-based local shell helper (ConnectionType.LOCAL). The shared androidLibrary module
+    // can't host CMake (the KMP Android library plugin has no externalNativeBuild), so the .so is
+    // built here and loaded by app.skerry.shared.local.LocalPty in the shared module at runtime.
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = libs.versions.android.cmake.get()
+        }
+    }
+    ndkVersion = libs.versions.android.ndk.get()
     packaging {
         resources {
             // LICENSE.md is shipped in every BouncyCastle jar (bcprov/bcpkix/bcutil) since 1.85;

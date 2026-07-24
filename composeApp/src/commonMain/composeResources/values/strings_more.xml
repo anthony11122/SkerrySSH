@@ -1,6 +1,7 @@
 <resources>
     <string name="more_title">More</string>
     <string name="more_port_forwarding">Port forwarding</string>
+    <string name="more_local_terminal">Local terminal</string>
     <string name="more_known_hosts">Known hosts</string>
     <string name="more_team">Team</string>
     <string name="more_ai_privacy">AI assistant</string>

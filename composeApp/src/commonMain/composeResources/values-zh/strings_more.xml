@@ -1,6 +1,7 @@
 <resources>
     <string name="more_title">更多</string>
     <string name="more_port_forwarding">端口转发</string>
+    <string name="more_local_terminal">本地终端</string>
     <string name="more_known_hosts">已知主机</string>
     <string name="more_team">团队</string>
     <string name="more_ai_privacy">AI 助手</string>

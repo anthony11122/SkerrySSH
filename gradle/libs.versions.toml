@@ -7,6 +7,10 @@ android-compileSdk = "37"
 # (sshj transport, file-based stores) is shared between desktop/Android without rewriting to okio
 android-minSdk = "26"
 android-targetSdk = "36"
+# NDK + CMake for the local-shell PTY helper (androidApp/src/main/cpp). Pinned so CI/dev builds
+# fetch the same toolchain; keep in sync with what the release environment has installed.
+android-ndk = "27.2.12479018"
+android-cmake = "3.22.1"
 androidx-activity = "1.13.0"
 androidx-lifecycle = "2.11.0"
 # Android biometrics: BiometricPrompt + CryptoObject (Keystore-fenced key)
