@@ -233,6 +233,7 @@
     <string name="settings_about_documentation">文档</string>
     <string name="settings_about_licenses">开源许可</string>
     <string name="settings_about_footer">开源之海 · © 2026 Skerry</string>
+    <string name="settings_about_fork_note">二开版本（v0.3.2）：保险库主密码最低长度放宽为 1 位（上游为 12 位）。</string>
     <string name="settings_about_check_updates">检查更新</string>
     <string name="settings_about_check_updates_desc">每天通过 GitHub Releases API 检查最新版本。</string>
     <string name="settings_about_update_available">版本 %1$s 可用</string>

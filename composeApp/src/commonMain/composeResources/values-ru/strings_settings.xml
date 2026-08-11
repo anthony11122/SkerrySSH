@@ -233,6 +233,7 @@
     <string name="settings_about_documentation">Документация</string>
     <string name="settings_about_licenses">Лицензии открытого ПО</string>
     <string name="settings_about_footer">Построено на открытых морях · © 2026 Skerry</string>
+    <string name="settings_about_fork_note">Форк (v0.3.2): минимум мастер-пароля снижен до 1 символа (в апстриме — 12).</string>
     <string name="settings_about_check_updates">Проверять обновления</string>
     <string name="settings_about_check_updates_desc">Раз в день проверять последнюю версию через GitHub Releases API.</string>
     <string name="settings_about_update_available">Доступна версия %1$s</string>

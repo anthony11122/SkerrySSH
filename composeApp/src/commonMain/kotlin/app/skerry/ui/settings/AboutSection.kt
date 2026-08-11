@@ -24,6 +24,7 @@ import app.skerry.ui.generated.resources.settings_about_check_updates
 import app.skerry.ui.generated.resources.settings_about_check_updates_desc
 import app.skerry.ui.generated.resources.settings_about_documentation
 import app.skerry.ui.generated.resources.settings_about_footer
+import app.skerry.ui.generated.resources.settings_about_fork_note
 import app.skerry.ui.generated.resources.settings_about_licenses
 import app.skerry.ui.generated.resources.settings_about_tagline
 import app.skerry.ui.generated.resources.settings_about_version
@@ -43,6 +44,7 @@ internal fun AboutSection() {
         Txt(stringResource(Res.string.settings_about_version, AppVersion.VERSION), color = Skerry.colors.dim, size = 12.sp, modifier = Modifier.padding(top = 4.dp))
         UpdateAvailableBlock()
         Txt(stringResource(Res.string.settings_about_tagline), color = Skerry.colors.dim, size = 12.5.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 12.dp, start = 20.dp, end = 20.dp))
+        Txt(stringResource(Res.string.settings_about_fork_note), color = Skerry.colors.faint, size = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp, start = 20.dp, end = 20.dp))
         AboutLinkButtons(Modifier.padding(top = 18.dp))
         if (updates != null) {
             SettingToggleRow(
@@ -55,13 +57,13 @@ internal fun AboutSection() {
     }
 }
 
-// Project pages opened from the About buttons.
+// Project pages opened from the About buttons. This fork's URLs, not upstream's.
 internal object AboutLinks {
-    const val DOCUMENTATION = "https://github.com/SeCherkasov/SkerrySSH#readme"
-    const val LICENSES = "https://github.com/SeCherkasov/SkerrySSH/blob/main/LICENSE"
+    const val DOCUMENTATION = "https://github.com/anthony11122/SkerrySSH#readme"
+    const val LICENSES = "https://github.com/anthony11122/SkerrySSH/blob/main/LICENSE"
 
     /** Release notes of the running version: the GitHub release tagged `v<version>`. */
-    fun whatsNew(version: String) = "https://github.com/SeCherkasov/SkerrySSH/releases/tag/v$version"
+    fun whatsNew(version: String) = "https://github.com/anthony11122/SkerrySSH/releases/tag/v$version"
 }
 
 /** What's new / Documentation / Licenses row, shared by the desktop and mobile About screens. */

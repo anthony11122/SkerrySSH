@@ -13,16 +13,6 @@
 
 ---
 
-## ⚠️ 本 Fork 改动（v0.3.2）
-
-基于上游 [SeCherkasov/SkerrySSH](https://github.com/SeCherkasov/SkerrySSH) 的二次开发版本，与上游的差异：
-
-- **保险库主密码最低长度放宽为 1 位** —— 上游强制 12 位，本 fork 按需放宽（自行权衡安全性）
-- **README 全中文** —— 文档中文化
-- **版本号 0.3.2**（versionCode 11）
-
----
-
 开源 SSH 客户端，单一核心（Kotlin Multiplatform）覆盖所有平台：
 **Linux · Windows · macOS · Android**。
 

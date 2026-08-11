@@ -233,6 +233,7 @@
     <string name="settings_about_documentation">Documentation</string>
     <string name="settings_about_licenses">Open-source licenses</string>
     <string name="settings_about_footer">Built on the open seas · © 2026 Skerry</string>
+    <string name="settings_about_fork_note">Fork build (v0.3.2): master password minimum lowered to 1 character (upstream: 12).</string>
     <string name="settings_about_check_updates">Check for updates</string>
     <string name="settings_about_check_updates_desc">Check the latest version via the GitHub Releases API once a day.</string>
     <string name="settings_about_update_available">Version %1$s is available</string>
