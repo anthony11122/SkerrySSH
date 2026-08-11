@@ -77,11 +77,6 @@
     <string name="settings_ai_error_unknown">AI 请求失败。请重试。</string>
     <string name="settings_ai_error_engine_crashed">本地模型引擎意外停止。请重试。</string>
     <string name="settings_ai_model_meta">%1$s · %2$s</string>
-    <string name="settings_ai_agent">Agent 模式</string>
-    <string name="settings_ai_agent_desc">AI 可自主执行多步任务：命令直接运行并读取输出，危险命令仍需你确认。</string>
-    <string name="settings_ai_agent_force">所有命令需确认</string>
-    <string name="settings_ai_agent_force_desc">关闭自动执行：每一步都等待你确认（适合生产主机）。</string>
-    <string name="settings_ai_agent_hint">Agent 模式在终端助手面板输入任务即可使用。每任务上限：%1$d 步 / %2$d 分钟。</string>
     <string name="settings_ai_sanitize">发送前清除敏感信息</string>
     <string name="settings_ai_sanitize_desc">向外部提供商发送前移除密码、令牌和密钥。</string>
     <string name="settings_ai_preview">发送前预览提示</string>

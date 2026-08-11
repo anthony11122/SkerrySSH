@@ -150,8 +150,15 @@ class AgentLoopController(
      * Feed a model reply. Returns the parsed directive (the caller may also inspect [state]).
      * An [AgentDirective.Execute] proposal is stored and the state moves to AwaitingExecution
      * (safe) or AwaitingConfirm (Danger or [forceConfirmAll]).
+     *
+     * Terminal states are absorbing: after [AgentLoopState.Done], [AgentLoopState.Failed] or
+     * [AgentLoopState.Interrupted] the loop ignores further replies (returns [AgentDirective.Unparsable]
+     * without touching state), so a late-finishing stream cannot resurrect a finished task.
      */
     fun onModelReply(raw: String): AgentDirective {
+        if (state == AgentLoopState.Done || state == AgentLoopState.Failed || state == AgentLoopState.Interrupted) {
+            return AgentDirective.Unparsable
+        }
         val directive = parseAgentDirective(raw)
         when (directive) {
             is AgentDirective.Execute -> {

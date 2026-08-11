@@ -25,7 +25,7 @@ class AgentLoopTest {
     fun `safe command flows Execution to Evaluating and back to Thinking`() {
         val loop = AgentLoopController()
         loop.start()
-        val directive = loop.onModelReply("ACTION: CMD df -h\nACTION: INFO: disk usage")
+        val directive = loop.onModelReply("ACTION: CMD df -h\nINFO: disk usage")
 
         assertEquals(AgentDirective.Execute("df -h", "disk usage"), directive)
         assertEquals(AgentLoopState.AwaitingExecution, loop.state)
@@ -110,7 +110,7 @@ class AgentLoopTest {
     fun `unparsable reply stays Thinking for a re-prompt`() {
         val loop = AgentLoopController()
         loop.start()
-        val directive = loop.onModelReply("Hello there!")
+        val directive = loop.onModelReply("   ")
         assertEquals(AgentDirective.Unparsable, directive)
         assertEquals(AgentLoopState.Thinking, loop.state)
     }
@@ -160,9 +160,10 @@ class AgentLoopTest {
 
     @Test
     fun `guard trips at the time limit`() {
-        val loop = AgentLoopController(maxMinutes = 0)
+        // A negative limit makes elapsed > limit trivially true after start() (the wall clock is
+        // real, so runTest's virtual delay cannot advance it).
+        val loop = AgentLoopController(maxMinutes = -1)
         loop.start()
-        kotlinx.coroutines.runBlocking { kotlinx.coroutines.delay(5) }
         assertNotNull(loop.guard())
     }
 

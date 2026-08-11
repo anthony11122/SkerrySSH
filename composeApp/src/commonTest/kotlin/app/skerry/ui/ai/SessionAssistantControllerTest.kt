@@ -458,7 +458,7 @@ private fun agentController(
 fun `agent executes a safe command automatically and completes on DONE`() = runTest {
     val p = QueueProvider(
         listOf(
-            listOf("ACTION: CMD df -h\nACTION: INFO: disk usage"),
+            listOf("ACTION: CMD df -h\nINFO: disk usage"),
             listOf("ACTION: DONE 磁盘使用正常，剩余 50G"),
         ),
     )

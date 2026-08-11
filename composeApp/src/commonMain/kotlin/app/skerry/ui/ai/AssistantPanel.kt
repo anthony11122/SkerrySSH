@@ -159,18 +159,19 @@ private fun AgentBar(controller: SessionAssistantController) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Sym("auto_awesome", size = 13.sp, color = Skerry.colors.cyanBright)
+            // New UI text is hardcoded here: the compose resource generator has repeatedly failed
+            // to emit freshly added keys in CI builds (Unresolved reference), while pre-existing
+            // keys generate fine — so the agent strip avoids new resource keys entirely.
             val stateText = when (state) {
-                AgentLoopState.Thinking -> stringResource(Res.string.agent_state_thinking)
-                AgentLoopState.Executing -> controller.agentExecutingCommand?.let {
-                    stringResource(Res.string.agent_state_executing, it)
-                } ?: stringResource(Res.string.agent_state_executing, "")
-                AgentLoopState.AwaitingConfirm -> stringResource(Res.string.agent_state_confirm)
-                AgentLoopState.AwaitingExecution -> stringResource(Res.string.agent_state_thinking)
-                AgentLoopState.Asking -> stringResource(Res.string.agent_state_asking)
-                AgentLoopState.Evaluating -> stringResource(Res.string.agent_state_thinking)
-                AgentLoopState.Done -> stringResource(Res.string.agent_state_done)
-                AgentLoopState.Failed -> stringResource(Res.string.agent_state_failed)
-                AgentLoopState.Interrupted -> stringResource(Res.string.agent_state_interrupted)
+                AgentLoopState.Thinking -> "Agent 思考中…"
+                AgentLoopState.Executing -> controller.agentExecutingCommand?.let { "执行中：$it" } ?: "执行中…"
+                AgentLoopState.AwaitingConfirm -> "等待你的确认"
+                AgentLoopState.AwaitingExecution -> "Agent 思考中…"
+                AgentLoopState.Asking -> "等待你的回答"
+                AgentLoopState.Evaluating -> "Agent 思考中…"
+                AgentLoopState.Done -> "任务完成"
+                AgentLoopState.Failed -> "任务失败"
+                AgentLoopState.Interrupted -> "已中断"
                 AgentLoopState.Idle -> ""
             }
             Txt(
@@ -191,7 +192,7 @@ private fun AgentBar(controller: SessionAssistantController) {
                 Txt("${controller.agentStepCount} 步", color = Skerry.colors.faint, size = 10.5.sp)
             }
             if (state != AgentLoopState.Done && state != AgentLoopState.Failed && state != AgentLoopState.Interrupted) {
-                IconBtn("stop", onClick = controller::agentStop, box = 24, icon = 14.sp, tooltip = stringResource(Res.string.agent_stop))
+                IconBtn("stop", onClick = controller::agentStop, box = 24, icon = 14.sp, tooltip = "停止 Agent")
             }
         }
         if (state == AgentLoopState.AwaitingConfirm) {
@@ -212,14 +213,14 @@ private fun AgentBar(controller: SessionAssistantController) {
                         Modifier.clip(RoundedCornerShape(6.dp)).background(Skerry.colors.overlayMed)
                             .clickable { controller.agentReject() }.padding(horizontal = 8.dp, vertical = 4.dp),
                     ) {
-                        Txt(stringResource(Res.string.agent_reject), color = Skerry.colors.dim, size = 11.sp)
+                        Txt("拒绝", color = Skerry.colors.dim, size = 11.sp)
                     }
                     Box(
                         Modifier.clip(RoundedCornerShape(6.dp)).background(Skerry.colors.cyan)
                             .clickable { controller.agentConfirm() }.padding(horizontal = 8.dp, vertical = 4.dp),
                     ) {
                         Txt(
-                            if (proposal.assessment.risk == CommandRisk.Danger) stringResource(Res.string.agent_confirm_run) else stringResource(Res.string.assistant_run),
+                            if (proposal.assessment.risk == CommandRisk.Danger) "确认执行" else "在会话中运行",
                             color = Skerry.colors.ink, size = 11.sp, weight = FontWeight.SemiBold,
                         )
                     }

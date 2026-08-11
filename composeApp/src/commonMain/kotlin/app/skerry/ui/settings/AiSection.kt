@@ -129,11 +129,12 @@ private fun LiveAiSection(ai: app.skerry.ui.ai.AiAssistantController) {
     SectionDivider()
 
     // Agent mode (v0.4.0): global on/off + guardrail knobs. The loop itself lives in the
-    // terminal assistant panel; this is where it is enabled and bounded.
+    // terminal assistant panel; this is where it is enabled and bounded. UI text is hardcoded
+    // (new compose resource keys failed to generate in CI, see AssistantPanel AgentBar).
     var agentOpen by remember { mutableStateOf(false) }
     AiQuickChatHeader(
-        stringResource(Res.string.settings_ai_agent),
-        stringResource(Res.string.settings_ai_agent_desc),
+        "Agent 模式",
+        "AI 可自主执行多步任务：命令直接运行并读取输出，危险命令仍需你确认。",
         open = agentOpen,
         onToggle = { agentOpen = !agentOpen },
     )
@@ -143,23 +144,23 @@ private fun LiveAiSection(ai: app.skerry.ui.ai.AiAssistantController) {
         var agentEnabled by remember { mutableStateOf(s.agentEnabled) }
         var agentForce by remember { mutableStateOf(s.agentForceConfirm) }
         SettingToggleRow(
-            stringResource(Res.string.settings_ai_agent),
-            stringResource(Res.string.settings_ai_agent_desc),
+            "Agent 模式",
+            "AI 可自主执行多步任务：命令直接运行并读取输出，危险命令仍需你确认。",
             agentEnabled,
         ) {
-            agentEnabled = it
+            agentEnabled = !agentEnabled
             ai.saveAgent(agentEnabled, s.agentMaxSteps, s.agentMaxMinutes, agentForce)
         }
         SettingToggleRow(
-            stringResource(Res.string.settings_ai_agent_force),
-            stringResource(Res.string.settings_ai_agent_force_desc),
+            "所有命令需确认",
+            "关闭自动执行：每一步都等待你确认（适合生产主机）。",
             agentForce,
         ) {
-            agentForce = it
+            agentForce = !agentForce
             ai.saveAgent(agentEnabled, s.agentMaxSteps, s.agentMaxMinutes, agentForce)
         }
         Txt(
-            stringResource(Res.string.settings_ai_agent_hint, s.agentMaxSteps, s.agentMaxMinutes),
+            "Agent 模式在终端助手面板输入任务即可使用，默认每任务有步数与时间上限，超出自动停止。",
             color = Skerry.colors.faint, size = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp),
         )
         Spacer(Modifier.height(8.dp))
