@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -581,4 +582,78 @@ fun `agent output fed back to the model is sanitized`() = runTest {
     val system = p.lastMessages.first { it.role == AiRole.SYSTEM }.content
     assertTrue(system.contains("red\n  text"), "output must be ANSI-stripped: $system")
     assertFalse(system.contains("\u001b"), "control bytes must not reach the model")
+}
+
+@Test
+fun `agent runs several safe commands automatically before DONE`() = runTest {
+    // The core Agent-mode promise: one question authorizes a whole multi-step task, with every
+    // safe command executed automatically and its output fed back before the next round.
+    val p = QueueProvider(
+        listOf(
+            listOf("ACTION: CMD df -h\nINFO: step 1"),
+            listOf("ACTION: CMD du -sh /tmp\nINFO: step 2"),
+            listOf("ACTION: DONE 全部完成"),
+        ),
+    )
+    val c = agentController(p, this)
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+    c.agentOutputSource = { "Filesystem 50G used / 100G total" }
+
+    c.startAgent("analyze disk usage")
+    advanceUntilIdle()
+
+    assertEquals(
+        listOf("df -h\r", "du -sh /tmp\r"),
+        sent,
+        "every safe command in the chain must auto-run without confirmation",
+    )
+    assertEquals(2, c.agentStepCount)
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Done, c.agentState)
+    assertEquals("全部完成", c.agentSummary)
+    // The model's second round must have seen the first command's output in its system prompt.
+    val system = p.lastMessages.first { it.role == AiRole.SYSTEM }.content
+    assertTrue(system.contains("50G used"), "step output must be fed back to the model: $system")
+}
+
+@Test
+fun `agent forceConfirmAll pauses even for safe commands`() = runTest {
+    val p = QueueProvider(listOf(listOf("ACTION: CMD uptime")))
+    val c = agentController(p, this, agentSettings().copy(agentForceConfirm = true))
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+
+    c.startAgent("check uptime")
+    advanceUntilIdle()
+
+    assertEquals(app.skerry.shared.ai.AgentLoopState.AwaitingConfirm, c.agentState)
+    assertTrue(sent.isEmpty(), "a safe command must still wait under forceConfirmAll")
+
+    c.agentConfirm()
+    advanceUntilIdle()
+
+    assertEquals(listOf("uptime\r"), sent)
+}
+
+@Test
+fun `agent stops with a summary at the step limit`() = runTest {
+    val p = QueueProvider(
+        listOf(
+            listOf("ACTION: CMD echo 1"),
+            listOf("ACTION: CMD echo 2"),
+            listOf("ACTION: CMD echo 3"),
+        ),
+    )
+    val c = agentController(p, this, agentSettings().copy(agentMaxSteps = 2))
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+    c.agentOutputSource = { "ok" }
+
+    c.startAgent("echo a few things")
+    advanceUntilIdle()
+
+    assertEquals(listOf("echo 1\r", "echo 2\r"), sent, "the step after the limit must not run")
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Failed, c.agentState)
+    assertNotNull(c.agentSummary, "the guard reason must surface as the summary")
+    assertFalse(c.busy)
 }
