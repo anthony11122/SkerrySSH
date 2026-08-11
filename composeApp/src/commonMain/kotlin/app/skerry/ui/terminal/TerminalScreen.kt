@@ -277,8 +277,12 @@ fun TerminalScreen(
             // Desktop: the hidden IME field takes focus (it is inside this Box, so the Box's
             // own focus state and onFocusChanged still see the terminal as focused). With the
             // field focused, the system IME has a composition target for CJK input; physical
-            // keys are consumed by onPreviewKeyEvent and never reach the field.
-            imeFocusRequester.requestFocus()
+            // keys are consumed by onPreviewKeyEvent and never reach the field. The Box keeps
+            // focus first so key handling still has a target if the field is not composed yet
+            // (e.g. in tests), and the field request is guarded: an uninitialized requester
+            // must not take the terminal's keyboard away.
+            focusRequester.requestFocus()
+            if (desktopImeField) runCatching { imeFocusRequester.requestFocus() }
         }
     }
 

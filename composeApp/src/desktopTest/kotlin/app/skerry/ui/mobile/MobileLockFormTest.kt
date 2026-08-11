@@ -82,12 +82,13 @@ class MobileLockFormTest {
         assertEquals(PASSWORD to PASSWORD, created)
     }
 
+    /** Blank is still refused: whitespace-only input is an error even with a length floor of 1. */
     @Test
-    fun `a password that fails the strength check cannot create a vault`() {
+    fun `a blank password cannot create a vault`() {
         var created = false
         runForm({ MobileCreateScreen(error = null, onCreate = { _, _ -> created = true }) }) {
-            onField(Res.string.shell_master_password).performTextInput("abc")
-            onField(Res.string.shell_repeat_password).performTextInput("abc")
+            onField(Res.string.shell_master_password).performTextInput("   ")
+            onField(Res.string.shell_repeat_password).performTextInput("   ")
             onNodeWithTag(UiTags.FORM_SAVE).assertIsNotEnabled()
         }
         assertEquals(false, created)

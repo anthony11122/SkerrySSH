@@ -64,13 +64,13 @@ class CreateVaultFormTest {
         assertNull(created)
     }
 
-    /** Too weak to derive a key from: the strength check holds the button even with everything else done. */
+    /** Blank is still refused: whitespace-only input is an error even with a length floor of 1. */
     @Test
-    fun `a password that fails the strength check is refused`() {
+    fun `a blank password cannot create a vault`() {
         var created = false
         runForm({ DesktopCreateScreen(error = null, onCreate = { _, _ -> created = true }) }) {
-            password().performTextInput("abc")
-            confirmation().performTextInput("abc")
+            password().performTextInput("   ")
+            confirmation().performTextInput("   ")
             acknowledge()
             onNodeWithTag(UiTags.FORM_SAVE).assertIsNotEnabled()
         }

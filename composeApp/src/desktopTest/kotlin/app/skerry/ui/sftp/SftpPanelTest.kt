@@ -91,7 +91,7 @@ class SftpPanelTest {
 
 // The listing uppercases its column captions the locale-aware way ([uppercaseForLocale]); the run's
 // locale is whatever the machine has, and only Turkish/Azeri differ from a plain uppercase.
-private const val LOCALE = "en"
+private const val LOCALE = "zh"
 
 // The fake client's canned listing, and the path it reports for it.
 private const val REMOTE_ROOT = "/var/www"
