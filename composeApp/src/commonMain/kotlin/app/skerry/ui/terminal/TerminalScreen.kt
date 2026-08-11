@@ -769,7 +769,9 @@ fun TerminalScreen(
         // chords are exempt (IME doesn't own those, and Ctrl+C must stay SIGINT); Esc is
         // exempt too so the IME receives it and ends the composition (the shell ignores
         // the bare ESC the key path then sends).
-        if (desktopImeField && imeComposing && !event.isCtrlPressed && !event.isAltPressed && event.key != Key.Escape) {
+        val imeOwnsKey = desktopImeField && imeComposing &&
+            !event.isCtrlPressed && !event.isAltPressed && event.key != Key.Escape
+        if (imeOwnsKey) {
             return true
         }
         if (isImeOwnedPrintable(imeInput, event.isCtrlPressed, event.isAltPressed, event.utf16CodePoint) &&
@@ -1241,7 +1243,8 @@ fun TerminalScreen(
       // ([imeDeltaToPty]) and reset immediately — the field is just a "funnel", holds no text.
       // Stood down while the search panel is open: two fields fighting over the IME would
       // send the query into the PTY.
-      if ((imeInput || desktopImeField) && !closed && !searchOpen) {
+      val imeFunnelActive = (imeInput || desktopImeField) && !closed && !searchOpen
+      if (imeFunnelActive) {
           BasicTextField(
               value = imeValue,
               onValueChange = { nv ->
