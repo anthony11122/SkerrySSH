@@ -24,7 +24,6 @@ import app.skerry.ui.generated.resources.settings_about_check_updates
 import app.skerry.ui.generated.resources.settings_about_check_updates_desc
 import app.skerry.ui.generated.resources.settings_about_documentation
 import app.skerry.ui.generated.resources.settings_about_footer
-import app.skerry.ui.generated.resources.settings_about_fork_note
 import app.skerry.ui.generated.resources.settings_about_licenses
 import app.skerry.ui.generated.resources.settings_about_tagline
 import app.skerry.ui.generated.resources.settings_about_version
