@@ -1,45 +1,45 @@
 <resources>
-    <!-- Settings nav labels (SettingsPanel.kt · SettingsTab.navLabel) -->
+    <!-- 设置导航标签 (SettingsPanel.kt · SettingsTab.navLabel) -->
     <string name="shtail_nav_ai">AI</string>
-    <string name="shtail_nav_sync">Sync</string>
-    <string name="shtail_nav_security">Security</string>
-    <string name="shtail_nav_appearance">Appearance</string>
-    <string name="shtail_nav_terminal">Terminal</string>
-    <string name="shtail_nav_keyboard">Keyboard</string>
-    <string name="shtail_nav_about">About</string>
+    <string name="shtail_nav_sync">同步</string>
+    <string name="shtail_nav_security">安全</string>
+    <string name="shtail_nav_appearance">外观</string>
+    <string name="shtail_nav_terminal">终端</string>
+    <string name="shtail_nav_keyboard">键盘</string>
+    <string name="shtail_nav_about">关于</string>
 
-    <!-- Mobile host detail rows (MobileHostDetailView.kt · mobileHostDetailRows) -->
-    <string name="shtail_host_address">Address</string>
-    <string name="shtail_host_port">Port</string>
-    <string name="shtail_host_auth">Auth</string>
-    <string name="shtail_host_saved_credential">Saved credential</string>
-    <string name="shtail_host_ask_on_connect">Ask on connect</string>
-    <string name="shtail_host_group">Group</string>
-    <string name="shtail_host_jump">Jump host</string>
-    <string name="shtail_host_notes">Notes</string>
+    <!-- 移动端主机详情行 (MobileHostDetailView.kt · mobileHostDetailRows) -->
+    <string name="shtail_host_address">地址</string>
+    <string name="shtail_host_port">端口</string>
+    <string name="shtail_host_auth">认证</string>
+    <string name="shtail_host_saved_credential">已保存的凭据</string>
+    <string name="shtail_host_ask_on_connect">连接时询问</string>
+    <string name="shtail_host_group">分组</string>
+    <string name="shtail_host_jump">跳板主机</string>
+    <string name="shtail_host_notes">备注</string>
 
-    <!-- Host grouping: synthetic bucket for hosts without a group (display only) -->
-    <string name="shtail_ungrouped">Ungrouped</string>
+    <!-- 主机分组：无分组主机的合成桶（仅显示） -->
+    <string name="shtail_ungrouped">未分组</string>
 
-    <!-- Host filter chips: "no tag filter" chip label (display only, see ALL_HOSTS_CHIP) -->
-    <string name="shtail_chip_all">All</string>
+    <!-- 主机筛选标签：无标签筛选的标签（仅用于显示，参见 ALL_HOSTS_CHIP） -->
+    <string name="shtail_chip_all">全部</string>
 
-    <!-- Folder header: the chevron that folds a group away (%1$s is the group name) -->
-    <string name="shtail_group_collapse">Collapse %1$s</string>
-    <string name="shtail_group_expand">Expand %1$s</string>
+    <!-- 文件夹标题：折叠分组的箭头（%1$s 为分组名称） -->
+    <string name="shtail_group_collapse">折叠 %1$s</string>
+    <string name="shtail_group_expand">展开 %1$s</string>
 
-    <!-- Folder header: the pencil opening the rename/delete dialog (%1$s is the group name) -->
-    <string name="shtail_group_rename">Rename %1$s</string>
+    <!-- 文件夹标题：打开重命名/删除对话框的铅笔图标（%1$s 为分组名称） -->
+    <string name="shtail_group_rename">重命名 %1$s</string>
 
-    <!-- Sidebar search field: the cross that empties the query (SidebarSearchField) -->
-    <string name="shtail_search_clear">Clear search</string>
+    <!-- 侧边栏搜索框：清空查询的叉号 (SidebarSearchField) -->
+    <string name="shtail_search_clear">清除搜索</string>
 
-    <!-- Mobile known hosts (MobileKnown.kt) -->
-    <string name="shtail_known_changed">changed</string>
-    <string name="shtail_known_key_changed_title">Key changed: %1$s</string>
-    <string name="shtail_known_mismatch_body">The %1$s fingerprint doesn't match the one on record. Verify before reconnecting; a mismatch can mean interception.</string>
+    <!-- 移动端已知主机 (MobileKnown.kt) -->
+    <string name="shtail_known_changed">已变更</string>
+    <string name="shtail_known_key_changed_title">密钥已变更：%1$s</string>
+    <string name="shtail_known_mismatch_body">%1$s 的指纹与记录不符。重新连接前请验证：不符可能意味着连接被劫持。</string>
 
-    <!-- Session tabs: default title for a blank tab (SessionsController.openBlank caller) -->
-    <string name="shtail_new_tab">New tab</string>
-    <string name="shtail_nav_trash">Trash</string>
+    <!-- 会话标签：空白标签的默认标题 (SessionsController.openBlank caller) -->
+    <string name="shtail_new_tab">新标签页</string>
+    <string name="shtail_nav_trash">回收站</string>
 </resources>

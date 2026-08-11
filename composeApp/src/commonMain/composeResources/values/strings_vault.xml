@@ -1,181 +1,173 @@
 <resources>
-    <!-- Vault section: keychain manager, secret cards/details, dialogs, and the master-password gate. -->
-    <string name="vault_title">Vault</string>
-    <string name="vault_sidebar_header">VAULT</string>
-    <string name="vault_e2e_encrypted">End-to-end encrypted</string>
-    <string name="vault_e2e_description">Private keys are encrypted with your master password and never sync in plaintext.</string>
-    <string name="vault_generate_key">Generate key</string>
-    <string name="vault_add_password">Add password</string>
-    <string name="vault_import_certificate">Import certificate</string>
+    <!-- Vault section: 密钥管理器、密钥卡片/详情、对话框和主密码门控 -->
+    <string name="vault_title">保险库</string>
+    <string name="vault_sidebar_header">保险库</string>
+    <string name="vault_e2e_encrypted">端到端加密</string>
+    <string name="vault_e2e_description">私钥由你的主密码加密，绝不以明文同步。</string>
+    <string name="vault_generate_key">生成密钥</string>
+    <string name="vault_add_password">添加密码</string>
+    <string name="vault_import_certificate">导入证书</string>
 
 
-    <!-- Empty category states. -->
-    <string name="vault_empty_ssh_title">No SSH keys yet</string>
-    <string name="vault_empty_ssh_hint">Generate a key to attach to hosts.</string>
-    <string name="vault_empty_passwords_title">No passwords yet</string>
-    <string name="vault_empty_passwords_hint">Add a password — it's stored encrypted and reusable across hosts.</string>
-    <string name="vault_empty_certificates_title">No certificates yet</string>
-    <string name="vault_empty_certificates_hint">Import a CA-signed certificate and its private key.</string>
-    <string name="vault_empty_certificates_hint_short">Import a CA-signed certificate and its private key.</string>
+    <!-- 空分类状态 -->
+    <string name="vault_empty_ssh_title">暂无 SSH 密钥</string>
+    <string name="vault_empty_ssh_hint">生成密钥以附加到主机。</string>
+    <string name="vault_empty_passwords_title">暂无密码</string>
+    <string name="vault_empty_passwords_hint">添加密码——它将被加密存储，可跨主机重复使用。</string>
+    <string name="vault_empty_certificates_title">暂无证书</string>
+    <string name="vault_empty_certificates_hint">导入 CA 签发的证书及其私钥。</string>
+    <string name="vault_empty_certificates_hint_short">导入 CA 签发的证书及其私钥。</string>
 
-    <!-- Secret detail: subtitles and labels. -->
-    <string name="vault_subtitle_certificate">Certificate</string>
-    <string name="vault_subtitle_certificate_typed">%1$s certificate</string>
-    <string name="vault_subtitle_private_key">Private key</string>
-    <string name="vault_subtitle_password">Password</string>
-    <string name="vault_label_public_key">Public key</string>
-    <string name="vault_key_unreadable">Key could not be read</string>
-    <string name="vault_copy_certificate">Copy certificate</string>
-    <string name="vault_copy_public_key">Copy public key</string>
-    <string name="vault_copy_password">Copy password</string>
-    <string name="vault_export">Export</string>
-    <string name="vault_export_key">Export key</string>
-    <string name="vault_export_certificate">Export certificate</string>
-    <string name="vault_export_failed_title">Export failed</string>
-    <string name="vault_export_failed_message">The file was not written.</string>
-    <string name="vault_export_dismiss">Close</string>
-    <string name="vault_delete">Delete</string>
-    <string name="vault_rename">Rename</string>
-    <string name="vault_cancel">Cancel</string>
-    <string name="vault_used_by_one">Used by · 1 host</string>
-    <string name="vault_used_by">Used by · %1$d hosts</string>
-    <string name="vault_used_by_snippets_one">Used by · 1 snippet</string>
-    <string name="vault_used_by_snippets">Used by · %1$d snippets</string>
-    <string name="vault_not_attached">Not attached to any host yet.</string>
-    <string name="vault_cert_key_id">Key ID: %1$s</string>
-    <string name="vault_cert_unreadable">Certificate could not be read</string>
-    <string name="vault_label_principals">Principals</string>
-    <string name="vault_any_principal">any principal</string>
-    <string name="vault_label_valid">Valid</string>
-    <string name="vault_badge_expired">EXPIRED</string>
-    <string name="vault_label_serial">Serial</string>
-    <string name="vault_label_signing_ca">Signing CA</string>
+    <!-- 密钥详情：副标题和标签 -->
+    <string name="vault_subtitle_certificate">证书</string>
+    <string name="vault_subtitle_certificate_typed">%1$s 证书</string>
+    <string name="vault_subtitle_private_key">私钥</string>
+    <string name="vault_subtitle_password">密码</string>
+    <string name="vault_label_public_key">公钥</string>
+    <string name="vault_key_unreadable">无法读取密钥</string>
+    <string name="vault_copy_certificate">复制证书</string>
+    <string name="vault_copy_public_key">复制公钥</string>
+    <string name="vault_copy_password">复制密码</string>
+    <string name="vault_export">导出</string>
+    <string name="vault_export_key">导出密钥</string>
+    <string name="vault_export_certificate">导出证书</string>
+    <string name="vault_export_failed_title">导出失败</string>
+    <string name="vault_export_failed_message">文件未写入。</string>
+    <string name="vault_export_dismiss">关闭</string>
+    <string name="vault_delete">删除</string>
+    <string name="vault_rename">重命名</string>
+    <string name="vault_cancel">取消</string>
+    <string name="vault_used_by_one">被 1 台主机使用</string>
+    <string name="vault_used_by">被 %1$d 台主机使用</string>
+    <string name="vault_used_by_snippets_one">被 1 个片段使用</string>
+    <string name="vault_used_by_snippets">被 %1$d 个片段使用</string>
+    <string name="vault_not_attached">尚未附加到任何主机。</string>
+    <string name="vault_cert_key_id">密钥 ID: %1$s</string>
+    <string name="vault_cert_unreadable">无法读取证书</string>
+    <string name="vault_label_principals">主体</string>
+    <string name="vault_any_principal">任意主体</string>
+    <string name="vault_label_valid">有效期</string>
+    <string name="vault_badge_expired">已过期</string>
+    <string name="vault_label_serial">序列号</string>
+    <string name="vault_label_signing_ca">签发 CA</string>
 
-    <!-- Generate SSH key dialog. -->
-    <string name="vault_dialog_generate_title">Generate SSH key</string>
-    <string name="vault_dialog_generate_subtitle">A new key pair is sealed in your vault — no passphrase needed.</string>
-    <string name="vault_field_name">NAME</string>
-    <string name="vault_placeholder_name_key">e.g. work-laptop</string>
-    <string name="vault_field_algorithm">ALGORITHM</string>
-    <string name="vault_generate">Generate</string>
+    <!-- 生成 SSH 密钥对话框 -->
+    <string name="vault_dialog_generate_title">生成 SSH 密钥</string>
+    <string name="vault_dialog_generate_subtitle">新密钥对将加密存储在保险库中——无需密码短语。</string>
+    <string name="vault_field_name">名称</string>
+    <string name="vault_placeholder_name_key">例如 工作电脑</string>
+    <string name="vault_field_algorithm">算法</string>
+    <string name="vault_generate">生成</string>
 
-    <!-- Add password dialog. -->
-    <string name="vault_dialog_add_password_subtitle">Stored encrypted in your vault and reusable across hosts.</string>
-    <string name="vault_placeholder_name_password">e.g. db-admin</string>
-    <string name="vault_field_password">PASSWORD</string>
-    <string name="vault_placeholder_password">secret</string>
-    <string name="vault_add">Add</string>
+    <!-- 添加密码对话框 -->
+    <string name="vault_dialog_add_password_subtitle">加密存储在保险库中，可跨主机重复使用。</string>
+    <string name="vault_placeholder_name_password">例如 数据库管理员</string>
+    <string name="vault_field_password">密码</string>
+    <string name="vault_placeholder_password">密码</string>
+    <string name="vault_add">添加</string>
 
-    <!-- Import certificate dialog. -->
-    <string name="vault_dialog_import_subtitle">A CA-signed certificate and its private key are sealed in your vault.</string>
-    <string name="vault_placeholder_name_cert">e.g. prod-access</string>
-    <string name="vault_field_private_key_pem">PRIVATE KEY (PEM)</string>
-    <string name="vault_field_certificate">CERTIFICATE (*-cert.pub)</string>
-    <string name="vault_field_passphrase">PASSPHRASE (if any)</string>
-    <string name="vault_placeholder_optional">optional</string>
-    <string name="vault_cert_read_error">Couldn't read this certificate — expected an OpenSSH *-cert.pub line.</string>
-    <string name="vault_cert_valid_summary">%1$s · %2$s · valid until %3$s</string>
-    <string name="vault_import">Import</string>
+    <!-- 导入证书对话框 -->
+    <string name="vault_dialog_import_subtitle">CA 签发的证书及其私钥将加密存储在保险库中。</string>
+    <string name="vault_placeholder_name_cert">例如 生产环境访问</string>
+    <string name="vault_field_private_key_pem">私钥 (PEM)</string>
+    <string name="vault_field_certificate">证书 (*-cert.pub)</string>
+    <string name="vault_field_passphrase">密码短语（如有）</string>
+    <string name="vault_placeholder_optional">可选</string>
+    <string name="vault_cert_read_error">无法读取该证书——期望 OpenSSH *-cert.pub 格式。</string>
+    <string name="vault_cert_valid_summary">%1$s · %2$s · 有效期至 %3$s</string>
+    <string name="vault_import">导入</string>
 
-    <!-- Confirm master password before a secret leaves the vault (clipboard copy or key export). -->
-    <string name="vault_confirm_master_title">Confirm master password</string>
-    <string name="vault_confirm_master_subtitle">Enter your master password to copy this secret to the clipboard.</string>
-    <string name="vault_confirm_master_subtitle_export">Enter your master password to write this private key to a file.</string>
-    <string name="vault_field_master_password">MASTER PASSWORD</string>
-    <string name="vault_placeholder_master_password">master password</string>
-    <string name="vault_password_mismatch_retry">That password didn't match — try again.</string>
-    <string name="vault_copy">Copy</string>
+    <!-- 复制密钥前确认主密码 -->
+    <string name="vault_confirm_master_title">确认主密码</string>
+    <string name="vault_confirm_master_subtitle">请输入主密码以将此密钥复制到剪贴板。</string>
+    <string name="vault_confirm_master_subtitle_export">请输入主密码以将此私钥写入文件。</string>
+    <string name="vault_field_master_password">主密码</string>
+    <string name="vault_placeholder_master_password">主密码</string>
+    <string name="vault_password_mismatch_retry">密码不匹配——请重试。</string>
+    <string name="vault_copy">复制</string>
 
-    <!-- Rename secret dialog. -->
-    <string name="vault_rename_title">Rename \"%1$s\"</string>
+    <!-- 重命名密钥对话框 -->
+    <string name="vault_rename_title">重命名「%1$s」</string>
 
-    <!-- Delete secret dialog. -->
-    <string name="vault_delete_title">Delete \"%1$s\"?</string>
-    <string name="vault_delete_detail_none">This is removed from your vault. This can't be undone.</string>
-    <string name="vault_delete_detail_bound">%1$d hosts will lose this credential and ask for a password on next connect. Can't be undone.</string>
+    <!-- 删除密钥对话框 -->
+    <string name="vault_delete_title">删除「%1$s」？</string>
+    <string name="vault_delete_detail_none">此密钥将从保险库中移除。此操作不可撤销。</string>
+    <string name="vault_delete_detail_bound">%1$d 台主机将失去此凭证，下次连接时需输入密码。无法撤销。</string>
 
-    <!-- Master-password gate: create / unlock / biometric offer / corrupted / reset. -->
-    <string name="vault_create_title">Create a master password</string>
-    <string name="vault_create_subtitle">Encrypts your local vault. The password stays on this device and can't be recovered — forget it and the data can't be decrypted.</string>
-    <string name="vault_master_password_label">Master password</string>
-    <string name="vault_confirm_password_label">Confirm password</string>
-    <string name="vault_create_button">Create vault</string>
-    <string name="vault_biometric_offer_title">Quick unlock</string>
-    <string name="vault_biometric_offer_subtitle">Unlock the vault without typing your master password. Change this later in settings.</string>
-    <string name="vault_biometric_enable">Enable biometrics</string>
-    <string name="vault_not_now">Not now</string>
-    <string name="vault_unlock_title">Unlock vault</string>
-    <string name="vault_unlock_subtitle">Enter your master password to open your hosts, keys and sessions.</string>
-    <string name="vault_unlock_button">Unlock</string>
-    <string name="vault_unlock_biometric">Unlock with biometrics</string>
-    <string name="vault_forgot_password">Reset master password</string>
-    <string name="vault_corrupted_title">Vault is corrupted</string>
-    <string name="vault_corrupted_subtitle">The vault file can't be read or decrypted. Reset the vault to keep using the app.</string>
-    <string name="vault_reset_vault">Reset vault</string>
-    <string name="vault_reset_subtitle">Irreversible. Saved passwords, keys and credentials are erased beyond recovery — the master password can't bring them back.</string>
-    <string name="vault_reset_scope_secrets_title">Secrets only</string>
-    <string name="vault_reset_scope_secrets_subtitle">Host profiles and known_hosts are kept.</string>
-    <string name="vault_reset_scope_everything_title">Erase everything</string>
-    <string name="vault_reset_scope_everything_subtitle">Also delete host profiles, known_hosts and settings.</string>
-    <string name="vault_reset_confirm_label">Type %1$s to confirm</string>
-    <string name="vault_reset_confirm_button">Reset permanently</string>
-    <string name="vault_link_key_file">Link key file</string>
-    <string name="vault_dialog_key_file_subtitle">Key and certificate stay on disk and are re-read on every connection</string>
-    <string name="vault_subtitle_key_file">Key file</string>
-    <string name="vault_subtitle_key_file_cert">Certificate file</string>
-    <string name="vault_field_key_path">PRIVATE KEY FILE</string>
-    <string name="vault_field_cert_path">CERTIFICATE FILE (OPTIONAL)</string>
-    <string name="vault_placeholder_name_key_file">Work SSH CA</string>
-    <string name="vault_hint_cert_sibling">Empty: uses %1$s next to the key, if present</string>
-    <string name="vault_hint_cert_sibling_opaque">Empty: no certificate — the key authenticates on its own</string>
-    <string name="vault_browse">Browse…</string>
-    <string name="vault_link">Link</string>
-    <string name="vault_badge_file">FILE</string>
-    <string name="vault_badge_file_missing">FILE MISSING</string>
-    <string name="vault_label_key_path">KEY FILE</string>
-    <string name="vault_label_cert_path">CERTIFICATE FILE</string>
-    <string name="vault_key_file_missing">Not readable from this device</string>
-    <string name="vault_cert_from_file_unreadable">Certificate file not readable</string>
+    <!-- 主密码门控：创建 / 解锁 / 生物识别 / 损坏 / 重置 -->
+    <string name="vault_create_title">创建主密码</string>
+    <string name="vault_create_subtitle">用于加密本地保险库。密码不离开此设备且无法恢复——忘记它，数据将无法解密。</string>
+    <string name="vault_master_password_label">主密码</string>
+    <string name="vault_confirm_password_label">确认密码</string>
+    <string name="vault_create_button">创建保险库</string>
+    <string name="vault_biometric_offer_title">快速解锁</string>
+    <string name="vault_biometric_offer_subtitle">无需输入主密码即可解锁保险库。可稍后在设置中更改。</string>
+    <string name="vault_biometric_enable">启用生物识别</string>
+    <string name="vault_not_now">暂不</string>
+    <string name="vault_unlock_title">解锁保险库</string>
+    <string name="vault_unlock_subtitle">输入主密码以打开你的主机、密钥和会话。</string>
+    <string name="vault_unlock_button">解锁</string>
+    <string name="vault_unlock_biometric">使用生物识别解锁</string>
+    <string name="vault_forgot_password">重置主密码</string>
+    <string name="vault_corrupted_title">保险库已损坏</string>
+    <string name="vault_corrupted_subtitle">保险库文件无法读取或解密。重置保险库才能继续使用应用。</string>
+    <string name="vault_reset_vault">重置保险库</string>
+    <string name="vault_reset_subtitle">不可逆。保存的密码、密钥和凭证将被彻底删除且无法恢复——主密码也无法找回它们。</string>
+    <string name="vault_reset_scope_secrets_title">仅密钥</string>
+    <string name="vault_reset_scope_secrets_subtitle">保留主机配置和 known_hosts。</string>
+    <string name="vault_reset_scope_everything_title">清除一切</string>
+    <string name="vault_reset_scope_everything_subtitle">同时删除主机配置、known_hosts 和设置。</string>
+    <string name="vault_reset_confirm_label">输入 %1$s 以确认</string>
+    <string name="vault_reset_confirm_button">永久重置</string>
+    <string name="vault_link_key_file">关联密钥文件</string>
+    <string name="vault_dialog_key_file_subtitle">密钥和证书保留在磁盘上，每次连接时重新读取</string>
+    <string name="vault_subtitle_key_file">密钥文件</string>
+    <string name="vault_subtitle_key_file_cert">证书文件</string>
+    <string name="vault_field_key_path">私钥文件</string>
+    <string name="vault_field_cert_path">证书文件（可选）</string>
+    <string name="vault_placeholder_name_key_file">工作 SSH CA</string>
+    <string name="vault_hint_cert_sibling">留空：使用密钥旁的 %1$s（若存在）</string>
+    <string name="vault_hint_cert_sibling_opaque">留空：无证书 — 仅用密钥认证</string>
+    <string name="vault_browse">浏览…</string>
+    <string name="vault_link">关联</string>
+    <string name="vault_badge_file">文件</string>
+    <string name="vault_badge_file_missing">文件缺失</string>
+    <string name="vault_label_key_path">密钥文件</string>
+    <string name="vault_label_cert_path">证书文件</string>
+    <string name="vault_key_file_missing">此设备无法读取</string>
+    <string name="vault_cert_from_file_unreadable">无法读取证书文件</string>
 
-    <!-- Section header: how much the vault holds and how it is protected. -->
     <plurals name="vault_item_count">
-        <item quantity="one">%1$d item</item>
-        <item quantity="other">%1$d items</item>
+        <item quantity="other">%1$d 项</item>
     </plurals>
     <string name="vault_header_summary">%1$s · XChaCha20-Poly1305 · Argon2id</string>
 
-    <!-- Type badges in the secret list. -->
 
-    <!-- Detail panel: facts about the selected secret. -->
-    <string name="vault_kv_type">Type</string>
-    <string name="vault_kv_fingerprint">Fingerprint</string>
-    <string name="vault_kv_passphrase">Passphrase</string>
-    <string name="vault_kv_added">Added</string>
-    <string name="vault_kv_last_used">Last used</string>
+    <string name="vault_kv_type">类型</string>
+    <string name="vault_kv_fingerprint">指纹</string>
+    <string name="vault_kv_passphrase">密钥口令</string>
+    <string name="vault_kv_added">添加于</string>
+    <string name="vault_kv_last_used">最近使用</string>
     <string name="vault_value_unknown">—</string>
-    <string name="vault_value_never">never</string>
-    <string name="vault_passphrase_set">set</string>
-    <string name="vault_passphrase_none">none</string>
+    <string name="vault_value_never">从未使用</string>
+    <string name="vault_passphrase_set">已设置</string>
+    <string name="vault_passphrase_none">无</string>
 
-    <!-- Detail panel: how the secret is stored. -->
-    <string name="vault_section_encryption">Encryption</string>
-    <string name="vault_kv_cipher">Cipher</string>
-    <string name="vault_kv_kdf">Key derivation</string>
-    <string name="vault_kv_stored">Stored on server</string>
+    <string name="vault_section_encryption">加密</string>
+    <string name="vault_kv_cipher">加密算法</string>
+    <string name="vault_kv_kdf">密钥派生</string>
+    <string name="vault_kv_stored">服务器存储</string>
     <string name="vault_kdf_value">Argon2id · %1$d MiB</string>
-    <string name="vault_stored_ciphertext">ciphertext only</string>
-    <string name="vault_stored_local">this device only</string>
+    <string name="vault_stored_ciphertext">仅密文</string>
+    <string name="vault_stored_local">仅本设备</string>
 
-    <!-- Detail panel: what this device did with the secret. -->
-    <string name="vault_section_audit">Audit</string>
-    <string name="vault_kv_copied">Copied</string>
+    <string name="vault_section_audit">审计</string>
+    <string name="vault_kv_copied">复制</string>
     <plurals name="vault_copies_window">
-        <item quantity="one">%1$d time in %2$d days</item>
-        <item quantity="other">%1$d times in %2$d days</item>
+        <item quantity="other">%2$d 天内 %1$d 次</item>
     </plurals>
 
-    <!-- Row meta line: the facts about a secret, type excluded (the badge says it). -->
-    <string name="vault_meta_rotated">rotated %1$s</string>
-    <string name="vault_meta_valid_until">valid until %1$s</string>
-    <string name="vault_kv_changed">Changed</string>
+    <string name="vault_meta_rotated">%1$s 轮换</string>
+    <string name="vault_meta_valid_until">有效期至 %1$s</string>
+    <string name="vault_kv_changed">更改于</string>
 </resources>

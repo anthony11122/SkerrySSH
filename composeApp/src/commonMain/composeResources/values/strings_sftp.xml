@@ -3,116 +3,114 @@
 
     <!-- Заголовки и шапка -->
     <string name="sftp_wbar_subtitle">SFTP · %1$s</string>
-    <string name="sftp_files_title">Files</string>
+    <string name="sftp_files_title">文件</string>
 
     <!-- Tooltips of the work-bar icons -->
-    <string name="sftp_tip_back">Back to terminal (F10)</string>
-    <string name="sftp_tip_refresh">Refresh both panes (F9)</string>
-    <string name="sftp_tip_filter">Filter listing (Ctrl+F)</string>
-    <string name="sftp_tip_upload">Upload selection (F5)</string>
-    <string name="sftp_tip_download">Download selection (F5)</string>
+    <string name="sftp_tip_back">返回终端 (F10)</string>
+    <string name="sftp_tip_refresh">刷新两个面板 (F9)</string>
+    <string name="sftp_tip_filter">筛选列表 (Ctrl+F)</string>
+    <string name="sftp_tip_upload">上传所选 (F5)</string>
+    <string name="sftp_tip_download">下载所选 (F5)</string>
 
     <!-- Действия тулбара / FAB -->
-    <string name="sftp_new_folder">New folder</string>
-    <string name="sftp_create">Create</string>
-    <string name="sftp_create_directory">Create directory</string>
-    <string name="sftp_upload_file">Upload file</string>
-    <string name="sftp_download_to_device">Download to device</string>
+    <string name="sftp_new_folder">新建文件夹</string>
+    <string name="sftp_create">创建</string>
+    <string name="sftp_create_directory">创建目录</string>
+    <string name="sftp_upload_file">上传文件</string>
+    <string name="sftp_download_to_device">下载到设备</string>
 
     <!-- Метки панелей -->
-    <string name="sftp_pane_local">Local</string>
-    <string name="sftp_pane_remote">Remote</string>
+    <string name="sftp_pane_local">本地</string>
+    <string name="sftp_pane_remote">远程</string>
 
     <!-- Статусы / уведомления -->
-    <string name="sftp_unavailable">SFTP unavailable</string>
-    <string name="sftp_opening">Opening SFTP…</string>
-    <string name="sftp_connecting">Connecting…</string>
-    <string name="sftp_loading">Loading…</string>
-    <string name="sftp_error">Error</string>
-    <string name="sftp_no_session">No active session</string>
-    <string name="sftp_no_session_hint">Connect a host to browse files</string>
+    <string name="sftp_unavailable">SFTP 不可用</string>
+    <string name="sftp_opening">正在打开 SFTP…</string>
+    <string name="sftp_connecting">连接中…</string>
+    <string name="sftp_loading">加载中…</string>
+    <string name="sftp_error">错误</string>
+    <string name="sftp_no_session">无活跃会话</string>
+    <string name="sftp_no_session_hint">连接主机以浏览文件</string>
 
     <!-- Общие кнопки диалогов -->
-    <string name="sftp_cancel">Cancel</string>
-    <string name="sftp_delete">Delete</string>
-    <string name="sftp_copy">Copy</string>
-    <string name="sftp_move">Move</string>
-    <string name="sftp_rename">Rename</string>
+    <string name="sftp_cancel">取消</string>
+    <string name="sftp_delete">删除</string>
+    <string name="sftp_copy">复制</string>
+    <string name="sftp_move">移动</string>
+    <string name="sftp_rename">重命名</string>
 
     <!-- Диалог имени (New folder / Rename) -->
-    <string name="sftp_already_exists">«%1$s» already exists</string>
+    <string name="sftp_already_exists">「%1$s」已存在</string>
 
     <!-- Диалоги удаления -->
-    <string name="sftp_delete_folder_q">Delete folder?</string>
-    <string name="sftp_delete_file_q">Delete file?</string>
-    <string name="sftp_delete_items_q">Delete %1$d items?</string>
-    <string name="sftp_delete_folder_body">«%1$s» and everything inside it will be removed permanently.</string>
-    <string name="sftp_delete_file_body">«%1$s» will be removed permanently.</string>
-    <string name="sftp_delete_items_dirs_body">%1$d items (folders with their contents) will be removed permanently.</string>
-    <string name="sftp_delete_items_body">%1$d items will be removed permanently.</string>
+    <string name="sftp_delete_folder_q">删除文件夹？</string>
+    <string name="sftp_delete_file_q">删除文件？</string>
+    <string name="sftp_delete_items_q">删除 %1$d 个项目？</string>
+    <string name="sftp_delete_folder_body">「%1$s」及其内部所有内容将被永久删除。</string>
+    <string name="sftp_delete_file_body">「%1$s」将被永久删除。</string>
+    <string name="sftp_delete_items_dirs_body">%1$d 个项目（含文件夹及其内容）将被永久删除。</string>
+    <string name="sftp_delete_items_body">%1$d 个项目将被永久删除。</string>
 
     <!-- Диалоги копирования / перемещения -->
-    <string name="sftp_what_single">«%1$s»</string>
-    <string name="sftp_items_count">%1$d items</string>
-    <string name="sftp_copy_to_q">Copy to %1$s?</string>
-    <string name="sftp_move_to_q">Move to %1$s?</string>
+    <string name="sftp_what_single">「%1$s」</string>
+    <string name="sftp_items_count">%1$d 个项目</string>
+    <string name="sftp_copy_to_q">复制到 %1$s？</string>
+    <string name="sftp_move_to_q">移动到 %1$s？</string>
     <string name="sftp_transfer_body">%1$s → %2$s</string>
 
     <!-- Ошибка передачи (имя: сообщение) -->
     <string name="sftp_transfer_error">%1$s: %2$s</string>
 
     <!-- Подтверждение перезаписи: в приёмнике уже есть объекты с такими именами -->
-    <string name="sftp_overwrite_q">Overwrite existing?</string>
-    <string name="sftp_overwrite_one">%1$s already exists in the destination.</string>
-    <string name="sftp_overwrite_many">%1$d items already exist in the destination and will be overwritten.</string>
-    <string name="sftp_overwrite">Overwrite</string>
+    <string name="sftp_overwrite_q">覆盖已存在的？</string>
+    <string name="sftp_overwrite_one">%1$s 在目标位置已存在。</string>
+    <string name="sftp_overwrite_many">%1$d 个项目在目标位置已存在，将被覆盖。</string>
+    <string name="sftp_overwrite">覆盖</string>
 
+    <!-- 内置查看器/编辑器（F3/F4） -->
     <!-- Listing columns (modified date / permissions) and the quick name filter -->
-    <string name="sftp_columns">Columns</string>
-    <string name="sftp_col_name">Name</string>
-    <string name="sftp_col_size">Size</string>
-    <string name="sftp_col_modified">Modified</string>
-    <string name="sftp_col_permissions">Permissions</string>
-    <!-- Caption over the permissions column: the full word doesn't fit the slot -->
-    <string name="sftp_col_permissions_short">Perms</string>
-    <string name="sftp_filter_hint">Filter (name or *.mask)</string>
-    <string name="sftp_tip_filter_toggle">Filter listing</string>
+    <string name="sftp_columns">显示列</string>
+    <string name="sftp_col_name">名称</string>
+    <string name="sftp_col_size">大小</string>
+    <string name="sftp_col_modified">修改时间</string>
+    <string name="sftp_col_permissions">权限</string>
+    <!-- Caption over the permissions column: the full word does not fit the slot -->
+    <string name="sftp_col_permissions_short">权限</string>
+    <string name="sftp_filter_hint">筛选（名称或 *.掩码）</string>
+    <string name="sftp_tip_filter_toggle">筛选列表</string>
     <string name="sftp_meta_joined">%1$s · %2$s</string>
-    <!-- Modified column date: recent — current year (month, day, HH:mm), day — without time,
-         old — past years (month, day, year); component order is per-locale -->
-    <string name="sftp_date_recent">%1$s %2$d %3$s</string>
-    <string name="sftp_date_day">%1$s %2$d</string>
-    <string name="sftp_date_old">%1$s %2$d %3$d</string>
+    <string name="sftp_date_recent">%1$s%2$d日 %3$s</string>
+    <string name="sftp_date_day">%1$s%2$d日</string>
+    <string name="sftp_date_old">%3$d年%1$s%2$d日</string>
     <string-array name="sftp_months">
-        <item>Jan</item>
-        <item>Feb</item>
-        <item>Mar</item>
-        <item>Apr</item>
-        <item>May</item>
-        <item>Jun</item>
-        <item>Jul</item>
-        <item>Aug</item>
-        <item>Sep</item>
-        <item>Oct</item>
-        <item>Nov</item>
-        <item>Dec</item>
+        <item>1月</item>
+        <item>2月</item>
+        <item>3月</item>
+        <item>4月</item>
+        <item>5月</item>
+        <item>6月</item>
+        <item>7月</item>
+        <item>8月</item>
+        <item>9月</item>
+        <item>10月</item>
+        <item>11月</item>
+        <item>12月</item>
     </string-array>
 
-    <!-- Built-in viewer/editor (F3/F4) -->
-    <string name="sftp_edit_title">Edit</string>
-    <string name="sftp_edit_title_view">View</string>
-    <string name="sftp_edit_readonly">read-only</string>
-    <string name="sftp_edit_modified">modified</string>
-    <string name="sftp_edit_saving">Saving…</string>
-    <string name="sftp_edit_find">Search:</string>
-    <string name="sftp_edit_not_found">not found</string>
-    <string name="sftp_edit_discard_q">Discard changes?</string>
-    <string name="sftp_edit_discard_body">«%1$s» has unsaved changes. Closing now loses them.</string>
-    <string name="sftp_edit_discard">Discard</string>
-    <string name="sftp_edit_conflict_q">File changed on the source?</string>
-    <string name="sftp_edit_conflict_body">«%1$s» changed since you opened it. Saving overwrites it with your version.</string>
+    <string name="sftp_edit_title">编辑</string>
+    <string name="sftp_edit_title_view">查看</string>
+    <string name="sftp_edit_readonly">只读</string>
+    <string name="sftp_edit_modified">已修改</string>
+    <string name="sftp_edit_saving">正在保存…</string>
+    <string name="sftp_edit_find">查找：</string>
+    <string name="sftp_edit_not_found">未找到</string>
+    <string name="sftp_edit_discard_q">放弃更改？</string>
+    <string name="sftp_edit_discard_body">「%1$s」有未保存的更改，现在关闭将会丢失。</string>
+    <string name="sftp_edit_discard">放弃</string>
+    <string name="sftp_edit_conflict_q">文件在源端已被修改？</string>
+    <string name="sftp_edit_conflict_body">「%1$s」在你打开后已更改。保存将用你的版本覆盖它。</string>
 
     <!-- Transfer queue under the panes -->
     <string name="sftp_queue_progress">%1$d%% · %2$s / %3$s</string>
-    <string name="sftp_queue_done">done</string>
+    <string name="sftp_queue_done">完成</string>
 </resources>

@@ -1,140 +1,140 @@
 <resources>
-    <!-- Vault lock / unlock / create / reset (LockScreen.kt, MobileDesignApp.kt) -->
-    <string name="shell_lock_title">Skerry is locked</string>
-    <string name="shell_unlock_subtitle_desktop">Enter your master password to unlock the harbor</string>
-    <string name="shell_unlock_subtitle_mobile">Enter your master password</string>
-    <string name="shell_master_password">Master password</string>
-    <string name="shell_unlock">Unlock</string>
-    <string name="shell_forgot_password">Reset master password</string>
-    <string name="shell_use_biometrics">Use biometrics</string>
-    <string name="shell_footer_never_leaves">Master password stays on this device</string>
-    <string name="shell_footer_never_leaves_short">Never leaves this device</string>
+    <!-- 保险库锁定 / 解锁 / 创建 / 重置 (LockScreen.kt, MobileDesignApp.kt) -->
+    <string name="shell_lock_title">Skerry 已锁定</string>
+    <string name="shell_unlock_subtitle_desktop">输入主密码以打开保险库</string>
+    <string name="shell_unlock_subtitle_mobile">输入你的主密码</string>
+    <string name="shell_master_password">主密码</string>
+    <string name="shell_unlock">解锁</string>
+    <string name="shell_forgot_password">重置主密码</string>
+    <string name="shell_use_biometrics">使用生物识别</string>
+    <string name="shell_footer_never_leaves">主密码不会离开此设备</string>
+    <string name="shell_footer_never_leaves_short">不会离开此设备</string>
 
-    <string name="shell_create_title">Set a master password</string>
-    <string name="shell_create_subtitle">Encrypts this vault and never leaves the device. No recovery.</string>
-    <string name="shell_repeat_password">Repeat password</string>
-    <string name="shell_create_vault">Create vault</string>
-    <string name="shell_pairing_link">Linking from another device? Use a pairing code</string>
-    <string name="shell_no_recovery_ack">I understand the master password can't be recovered or reset. Lose it and this vault is gone.</string>
+    <string name="shell_create_title">设置主密码</string>
+    <string name="shell_create_subtitle">加密此保险库，且永不离开设备。无法恢复。</string>
+    <string name="shell_repeat_password">重复密码</string>
+    <string name="shell_create_vault">创建保险库</string>
+    <string name="shell_pairing_link">从其他设备关联？使用配对码</string>
+    <string name="shell_no_recovery_ack">我理解主密码无法恢复或重置。一旦丢失，此保险库将无法找回。</string>
 
-    <string name="shell_password_strength">Password strength: %1$s</string>
-    <string name="shell_password_strength_weak">Weak</string>
-    <string name="shell_password_strength_fair">Fair</string>
-    <string name="shell_password_strength_good">Good</string>
-    <string name="shell_password_strength_strong">Strong</string>
-    <string name="shell_password_min_length">Use at least %1$d characters to create the vault</string>
-    <string name="shell_password_blank">The password can't be spaces only</string>
+    <string name="shell_password_strength">密码强度：%1$s</string>
+    <string name="shell_password_strength_weak">弱</string>
+    <string name="shell_password_strength_fair">一般</string>
+    <string name="shell_password_strength_good">良好</string>
+    <string name="shell_password_strength_strong">强</string>
+    <string name="shell_password_min_length">请使用至少 %1$d 个字符创建保险库</string>
+    <string name="shell_password_blank">密码不能全是空格</string>
 
-    <string name="shell_quick_unlock_title">Quick unlock</string>
-    <string name="shell_quick_unlock_subtitle">Open Skerry with your fingerprint instead of the master password.</string>
-    <string name="shell_not_now">Not now</string>
+    <string name="shell_quick_unlock_title">快速解锁</string>
+    <string name="shell_quick_unlock_subtitle">使用指纹代替主密码打开 Skerry。</string>
+    <string name="shell_not_now">暂不</string>
 
-    <string name="shell_corrupted_title">Storage is damaged</string>
-    <string name="shell_corrupted_subtitle">The vault file can't be read or decrypted. Reset it to use Skerry again.</string>
+    <string name="shell_corrupted_title">存储已损坏</string>
+    <string name="shell_corrupted_subtitle">保险库文件无法读取或解密。需重置后才能再次使用 Skerry。</string>
 
-    <string name="shell_reset_skerry">Reset Skerry</string>
-    <string name="shell_reset_subtitle">Permanent. Saved passwords, keys and identities are erased. No recovery.</string>
-    <string name="shell_reset_scope_secrets_title">Secrets only</string>
-    <string name="shell_reset_scope_secrets_subtitle">Keep host profiles and known_hosts.</string>
-    <string name="shell_reset_scope_all_title">Erase everything</string>
-    <string name="shell_reset_scope_all_subtitle">Also remove host profiles, known_hosts and settings.</string>
-    <string name="shell_reset_confirm_placeholder">Type %1$s to confirm</string>
-    <string name="shell_reset_permanently">Reset permanently</string>
+    <string name="shell_reset_skerry">重置 Skerry</string>
+    <string name="shell_reset_subtitle">永久不可逆。已保存的密码、密钥和身份将被抹除，无法恢复。</string>
+    <string name="shell_reset_scope_secrets_title">仅密钥</string>
+    <string name="shell_reset_scope_secrets_subtitle">保留主机配置和已知主机。</string>
+    <string name="shell_reset_scope_all_title">抹除全部</string>
+    <string name="shell_reset_scope_all_subtitle">同时移除主机配置、已知主机和设置。</string>
+    <string name="shell_reset_confirm_placeholder">输入 %1$s 以确认</string>
+    <string name="shell_reset_permanently">永久重置</string>
 
-    <!-- Common actions -->
-    <string name="shell_cancel">Cancel</string>
-    <string name="shell_save">Save</string>
-    <string name="shell_create">Create</string>
-    <string name="shell_connect">Connect</string>
-    <string name="shell_delete">Delete</string>
+    <!-- 通用操作 -->
+    <string name="shell_cancel">取消</string>
+    <string name="shell_save">保存</string>
+    <string name="shell_create">创建</string>
+    <string name="shell_connect">连接</string>
+    <string name="shell_delete">删除</string>
 
-    <!-- Group dialog (GroupDialog.kt) -->
-    <string name="shell_group_rename_title">Rename group</string>
-    <string name="shell_group_new_title">New group</string>
-    <string name="shell_group_rename_subtitle">Hosts in this group move with the new name.</string>
-    <string name="shell_group_new_subtitle">Creates an empty group. Drag hosts in, or pick it when adding a connection.</string>
-    <string name="shell_group_name_placeholder">Group name</string>
-    <string name="shell_group_delete">Delete group</string>
+    <!-- 分组对话框 (GroupDialog.kt) -->
+    <string name="shell_group_rename_title">重命名分组</string>
+    <string name="shell_group_new_title">新建分组</string>
+    <string name="shell_group_rename_subtitle">此分组中的主机将随新名称移动。</string>
+    <string name="shell_group_new_subtitle">创建空分组，然后拖入主机，或在添加连接时选择。</string>
+    <string name="shell_group_name_placeholder">分组名称</string>
+    <string name="shell_group_delete">删除分组</string>
 
-    <!-- Password dialog (PasswordDialog.kt) -->
-    <string name="shell_connect_to">Connect to %1$s</string>
-    <string name="shell_password_caps">PASSWORD</string>
-    <string name="shell_password_host_placeholder">connection password</string>
-    <string name="shell_not_stored_once">Not stored · used once</string>
-    <string name="shell_use_saved_secret">OR USE A SAVED SECRET</string>
+    <!-- 密码对话框 (PasswordDialog.kt) -->
+    <string name="shell_connect_to">连接到 %1$s</string>
+    <string name="shell_password_caps">密码</string>
+    <string name="shell_password_host_placeholder">连接密码</string>
+    <string name="shell_not_stored_once">未存储 · 仅使用一次</string>
+    <string name="shell_use_saved_secret">或使用已保存的凭据</string>
 
-    <!-- Delete host dialog (DeleteHostDialog.kt) -->
-    <string name="shell_delete_host_title">Delete \"%1$s\"?</string>
-    <string name="shell_delete_host_body">Removed from your hosts. Any stored credential stays in your vault. This can't be undone.</string>
+    <!-- 删除主机对话框 (DeleteHostDialog.kt) -->
+    <string name="shell_delete_host_title">删除 \"%1$s\"？</string>
+    <string name="shell_delete_host_body">已从主机列表中移除。已存储的凭据仍保留在保险库中。此操作不可撤销。</string>
 
-    <!-- Mobile host detail (MobileHostDetailView.kt) -->
-    <string name="shell_host">Host</string>
-    <string name="shell_host_not_found">Host not found</string>
+    <!-- 移动端主机详情 (MobileHostDetailView.kt) -->
+    <string name="shell_host">主机</string>
+    <string name="shell_host_not_found">未找到主机</string>
     <string name="shell_quick_sftp">SFTP</string>
-    <string name="shell_quick_tunnels">Tunnels</string>
-    <string name="shell_quick_snippets">Snippets</string>
-    <string name="shell_details">Details</string>
-    <string name="shell_edit_host">Edit host</string>
-    <string name="shell_duplicate_host">Duplicate host</string>
-    <string name="shell_delete_host">Delete host</string>
+    <string name="shell_quick_tunnels">隧道</string>
+    <string name="shell_quick_snippets">片段</string>
+    <string name="shell_details">详情</string>
+    <string name="shell_edit_host">编辑主机</string>
+    <string name="shell_duplicate_host">创建主机副本</string>
+    <string name="shell_delete_host">删除主机</string>
 
-    <!-- Mobile hosts list (MobileHostsView.kt) -->
-    <string name="shell_hosts">Hosts</string>
-    <string name="shell_search_hosts">Search hosts, tags, IPs…</string>
+    <!-- 移动端主机列表 (MobileHostsView.kt) -->
+    <string name="shell_hosts">主机</string>
+    <string name="shell_search_hosts">搜索主机、标签、IP…</string>
 
-    <!-- Mobile route placeholder (MobileDesignApp.kt) -->
-    <string name="shell_route_team">Team</string>
+    <!-- 移动端路由占位 (MobileDesignApp.kt) -->
+    <string name="shell_route_team">团队</string>
 
-    <!-- Desktop chrome: confirm dialogs, title bar, status bar (DesktopDesignApp.kt) -->
-    <string name="shell_this_session">this session</string>
-    <string name="shell_disconnect_title">Disconnect \"%1$s\"?</string>
-    <string name="shell_disconnect_message">The session and its terminal will be closed.</string>
-    <string name="shell_disconnect">Disconnect</string>
-    <string name="shell_disconnect_all_title">Disconnect all sessions in this tab?</string>
-    <string name="shell_disconnect_all_message">These sessions will be closed: %1$s</string>
-    <string name="shell_close_pane_title">Close pane?</string>
-    <string name="shell_close_pane_message">This session will be closed: %1$s</string>
-    <string name="shell_replace_pane_title">Replace this pane's session with \"%1$s\"?</string>
-    <string name="shell_close_panel">Close pane</string>
-    <string name="shell_lock">Lock</string>
-    <string name="shell_settings">Settings</string>
-    <string name="shell_status_connected">Connected</string>
-    <string name="shell_status_disconnected">Disconnected</string>
+    <!-- 桌面端边框：确认对话框、标题栏、状态栏 (DesktopDesignApp.kt) -->
+    <string name="shell_this_session">本次会话</string>
+    <string name="shell_disconnect_title">断开 \"%1$s\"？</string>
+    <string name="shell_disconnect_message">将关闭会话及其终端。</string>
+    <string name="shell_disconnect">断开连接</string>
+    <string name="shell_disconnect_all_title">断开此标签页中的所有会话？</string>
+    <string name="shell_disconnect_all_message">将关闭以下会话：%1$s</string>
+    <string name="shell_close_pane_title">关闭窗格？</string>
+    <string name="shell_close_pane_message">将关闭会话：%1$s</string>
+    <string name="shell_replace_pane_title">将此窗格的会话替换为 \"%1$s\"？</string>
+    <string name="shell_close_panel">关闭窗格</string>
+    <string name="shell_lock">锁定</string>
+    <string name="shell_settings">设置</string>
+    <string name="shell_status_connected">已连接</string>
+    <string name="shell_status_disconnected">已断开</string>
     <string name="shell_status_encoding">UTF-8 · LF</string>
-    <string name="shell_tip_add_pane">Add pane</string>
-    <string name="shell_tip_new_tab">New tab</string>
-    <string name="shell_tip_close_tab">Close %1$s</string>
-    <string name="shell_tip_more_actions">More actions</string>
-    <string name="shell_tip_sync_panes">Synchronized input between panes</string>
-    <string name="shell_tip_files">Files (SFTP)</string>
-    <string name="shell_tip_snippets">Snippets</string>
-    <string name="shell_tip_record">Record session</string>
-    <string name="shell_tip_record_stop">Stop recording</string>
-    <string name="shell_tip_play">Play recording</string>
-    <string name="shell_tip_minimize">Minimize</string>
-    <string name="shell_tip_maximize">Maximize</string>
-    <string name="shell_tip_restore">Restore</string>
-    <string name="shell_tip_close_window">Close window</string>
-    <string name="shell_tip_close">Close</string>
-    <string name="shell_tip_show_options">Show options</string>
-    <string name="shell_tip_show_hosts">Show hosts</string>
-    <string name="shell_tip_back">Back</string>
-    <string name="shell_tip_remove">Remove</string>
-    <string name="shell_tip_pause">Pause</string>
-    <string name="shell_tip_replay">Replay</string>
-    <string name="shell_tip_monitor">Monitoring</string>
-    <string name="shell_tip_disconnect">Disconnect</string>
-    <string name="shell_no_hosts_yet">No hosts yet</string>
-    <string name="shell_add_first_host">Add a connection to see it here.</string>
-    <string name="shell_kbdint_title">Additional verification</string>
-    <string name="shell_kbdint_jump">Requested by the jump host</string>
-    <string name="shell_kbdint_continue">Continue</string>
-    <string name="shell_kbdint_asks">The server is asking:</string>
+    <string name="shell_tip_add_pane">添加窗格</string>
+    <string name="shell_tip_new_tab">新建标签页</string>
+    <string name="shell_tip_close_tab">关闭 %1$s</string>
+    <string name="shell_tip_more_actions">更多操作</string>
+    <string name="shell_tip_sync_panes">窗格间输入同步</string>
+    <string name="shell_tip_files">文件 (SFTP)</string>
+    <string name="shell_tip_snippets">代码片段</string>
+    <string name="shell_tip_record">录制会话</string>
+    <string name="shell_tip_record_stop">停止录制</string>
+    <string name="shell_tip_play">播放录制</string>
+    <string name="shell_tip_minimize">最小化</string>
+    <string name="shell_tip_maximize">最大化</string>
+    <string name="shell_tip_restore">还原</string>
+    <string name="shell_tip_close_window">关闭窗口</string>
+    <string name="shell_tip_close">关闭</string>
+    <string name="shell_tip_show_options">显示选项</string>
+    <string name="shell_tip_show_hosts">显示主机</string>
+    <string name="shell_tip_back">返回</string>
+    <string name="shell_tip_remove">移除</string>
+    <string name="shell_tip_pause">暂停</string>
+    <string name="shell_tip_replay">重播</string>
+    <string name="shell_tip_monitor">监控</string>
+    <string name="shell_tip_disconnect">断开连接</string>
+    <string name="shell_no_hosts_yet">还没有主机</string>
+    <string name="shell_add_first_host">添加连接后会显示在这里。</string>
+    <string name="shell_kbdint_title">额外验证</string>
+    <string name="shell_kbdint_jump">由跳板主机请求</string>
+    <string name="shell_kbdint_continue">继续</string>
+    <string name="shell_kbdint_asks">服务器请求：</string>
 
-    <!-- Sessions root tab (MobileSessionsView.kt): what is open right now -->
-    <string name="shell_sessions_title">Sessions</string>
-    <string name="shell_sessions_count">%1$d open</string>
-    <string name="shell_sessions_none">No open sessions</string>
-    <string name="shell_sessions_none_hint">Connect from a catalog — the session stays here until you close it.</string>
-    <string name="shell_sessions_close">Close session</string>
+    <!-- 会话根标签页（MobileSessionsView.kt） -->
+    <string name="shell_sessions_title">会话</string>
+    <string name="shell_sessions_count">已打开 %1$d 个</string>
+    <string name="shell_sessions_none">没有打开的会话</string>
+    <string name="shell_sessions_none_hint">从目录中连接 — 会话会保留在这里，直到你关闭它。</string>
+    <string name="shell_sessions_close">关闭会话</string>
 </resources>

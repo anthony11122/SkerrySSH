@@ -44,7 +44,6 @@ internal fun AboutSection() {
         Txt(stringResource(Res.string.settings_about_version, AppVersion.VERSION), color = Skerry.colors.dim, size = 12.sp, modifier = Modifier.padding(top = 4.dp))
         UpdateAvailableBlock()
         Txt(stringResource(Res.string.settings_about_tagline), color = Skerry.colors.dim, size = 12.5.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 12.dp, start = 20.dp, end = 20.dp))
-        Txt(stringResource(Res.string.settings_about_fork_note), color = Skerry.colors.faint, size = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp, start = 20.dp, end = 20.dp))
         AboutLinkButtons(Modifier.padding(top = 18.dp))
         if (updates != null) {
             SettingToggleRow(
