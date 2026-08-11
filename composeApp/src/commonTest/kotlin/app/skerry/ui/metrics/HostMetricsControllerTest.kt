@@ -5,6 +5,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -107,10 +109,15 @@ class HostMetricsControllerTest {
         assertNotNull(m)
         assertEquals(59, m.diskPercent)
         assertEquals(4_294_967_296L, m.memUsedBytes)
-        // First the Linux chain was tried and failed, then the Windows probe answered; every
-        // later poll goes straight to the Windows command (platform locked, no re-probing).
+        // The first round-trip already tried the Linux chain, failed, and answered with the
+        // Windows probe (platform locked). Advance one interval to prove the next poll goes
+        // straight to the Windows command too — no re-probing.
         assertEquals("linux", linuxCommands.first())
-        assertTrue(winCommands.size >= 2, "probe + subsequent polls must use the Windows command")
+        assertEquals(1, winCommands.size, "first round: probe only")
+        advanceTimeBy(3_001)
+        runCurrent()
+        assertEquals(2, winCommands.size, "second round must reuse the Windows command, not re-probe")
+        assertTrue(linuxCommands.size == 1, "Linux chain must not be retried after the platform is locked")
 
         controller.stop()
         scope.cancel()
@@ -145,6 +152,13 @@ class HostMetricsControllerTest {
         )
 
         controller.start()
+        // Each round tries the Linux chain and the Windows probe once; three rounds of
+        // unparsable output end the loop with the verdict (the first round already ran
+        // synchronously, so two more intervals complete it).
+        advanceTimeBy(3_001)
+        runCurrent()
+        advanceTimeBy(3_001)
+        runCurrent()
 
         assertEquals(MetricsAvailability.Unsupported, controller.availability)
         assertNull(controller.metrics)
