@@ -359,8 +359,10 @@ class HostMetricsMonitorControllerTest {
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
         var calls = 0
         val controller = HostMetricsController(
-            // bad, bad, good, bad, bad — never three in a row, so no verdict is reached.
-            exec = { ExecResult(0, if (++calls == 3) output(50, 0, 0) else "not linux", "") },
+            // While the platform is unknown each round tries Linux then Windows, so the first
+            // good answer only lands on call 5; after it locks Linux, two more bad polls must not
+            // build a verdict (the counter was reset by the success).
+            exec = { ExecResult(0, if (++calls == 5) output(50, 0, 0) else "not linux", "") },
             scope = scope,
             intervalMs = 1_000,
         )
