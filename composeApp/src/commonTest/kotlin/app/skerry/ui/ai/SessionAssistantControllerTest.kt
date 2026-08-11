@@ -578,7 +578,7 @@ fun `agent output fed back to the model is sanitized`() = runTest {
     advanceUntilIdle()
 
     // The second call's system prompt must carry the sanitized output (no ANSI, blank runs collapsed).
-    val system = p.lastMessages.first { it.role == AiRole.SYSTEM }.text
+    val system = p.lastMessages.first { it.role == AiRole.SYSTEM }.content
     assertTrue(system.contains("red\n  text"), "output must be ANSI-stripped: $system")
     assertFalse(system.contains("\u001b"), "control bytes must not reach the model")
 }
