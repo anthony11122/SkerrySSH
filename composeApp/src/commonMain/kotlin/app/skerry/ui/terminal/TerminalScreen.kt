@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -752,105 +753,110 @@ fun TerminalScreen(
       // node within its own verticalScroll makes Compose scroll that container to "reveal" the node
       // when it takes focus, and clicking the pane back into focus slid the whole screen up by a
       // couple of rows. Nothing scrollable wraps this Box, so taking focus moves nothing.
+      // Shared key handling for the pane Box and the hidden IME field. Compose's preview pass
+      // runs root→focused: when the Box holds focus its preview handles the event and consumes
+      // it (the field never sees it); when the IME field holds focus (desktop CJK input) the
+      // field's own preview is on the focused path and handles it — the Box's does not fire,
+      // which the key-path tests proved. Either way a key is handled exactly once.
+      fun handleTerminalKey(event: KeyEvent): Boolean {
+        // Toggle the link (hand) cursor as Ctrl is pressed/released without moving the mouse.
+        // Runs before the KeyDown guard so a Ctrl KeyUp also clears it. Never consumes the event.
+        hoverPos?.let { updateHoverAffordance(it, event.isCtrlPressed) }
+        if (event.type != KeyEventType.KeyDown || closed) return false
+        // Desktop IME composition (pinyin, Japanese, etc.): while the input method is
+        // composing, physical keys belong to it (letters build the syllable, arrows/Enter
+        // pick the candidate) — consume them so nothing leaks into the PTY. Ctrl/Alt
+        // chords are exempt (IME doesn't own those, and Ctrl+C must stay SIGINT); Esc is
+        // exempt too so the IME receives it and ends the composition (the shell ignores
+        // the bare ESC the key path then sends).
+        if (desktopImeField && imeComposing && !event.isCtrlPressed && !event.isAltPressed && event.key != Key.Escape) {
+            return true
+        }
+        if (isImeOwnedPrintable(imeInput, event.isCtrlPressed, event.isAltPressed, event.utf16CodePoint) &&
+            isSoftKeyboardEvent(event)
+        ) {
+            return true
+        }
+        // --- Reverse history search (Ctrl-R): while the overlay is open, keys drive it, not the PTY ---
+        if (state.reverseSearch.query != null) {
+            when {
+                event.key == Key.Escape -> state.reverseSearch.close()
+                event.key == Key.Enter -> state.reverseSearch.accept()
+                // Another Ctrl-R (or ↑) — to the next (older) match; ↓ — to newer.
+                (event.isCtrlPressed && event.key == Key.R) || event.key == Key.DirectionUp ->
+                    state.reverseSearch.next()
+                event.key == Key.DirectionDown -> state.reverseSearch.prev()
+                // Delete — remove the selected command from history (manual cleanup), overlay open.
+                event.key == Key.Delete -> state.reverseSearch.deleteSelected()
+                event.key == Key.Backspace -> state.reverseSearch.backspace()
+                else -> {
+                    val cp = event.utf16CodePoint
+                    if (cp in 0x20..0xFFFF && !event.isCtrlPressed && !event.isAltPressed) {
+                        state.reverseSearch.append(cp.toChar().toString())
+                    }
+                }
+            }
+            return true
+        }
+        // Ctrl-R — open reverse history search (intercept from the shell, show our own overlay).
+        if (event.isCtrlPressed && event.key == Key.R) {
+            state.reverseSearch.open()
+            return true
+        }
+        // Shift+Tab — cycle autocomplete suggestion alternatives. Swallowed whenever a ghost
+        // is on screen, even one that cannot be accepted yet: letting it through sends ESC[Z,
+        // which the engine reads as navigation and drops the line it is tracking.
+        val ghostOnScreen = state.hasSuggestion || state.suggestionTail != null
+        if (event.isShiftPressed && event.key == Key.Tab && ghostOnScreen) {
+            state.cycleSuggestion()
+            return true
+        }
+        // Clipboard chords: Ctrl+Shift+C/V and the X11 pair Ctrl+Insert / Shift+Insert.
+        // Plain Ctrl+C stays SIGINT and bare Insert stays CSI 2~ — see [clipboardChord].
+        val clipboard = clipboardChord(
+            ctrl = event.isCtrlPressed,
+            shift = event.isShiftPressed,
+            alt = event.isAltPressed,
+            insertKey = event.isInsertKey(),
+            key = event.key,
+        )
+        if (clipboard != null) {
+            when (clipboard) {
+                ClipboardChord.Copy -> copySelection()
+                ClipboardChord.Paste -> pasteFromClipboard()
+            }
+            return true
+        }
+        val bytes = mapTerminalKey(
+            key = event.key,
+            ctrl = event.isCtrlPressed,
+            codePoint = event.utf16CodePoint,
+            alt = event.isAltPressed,
+            shift = event.isShiftPressed,
+            applicationCursor = state.applicationCursorKeys,
+            applicationKeypad = state.applicationKeypad,
+        )
+        if (bytes != null) {
+            state.clearSelection()
+            textToolbar.hide()
+            // Tab with an autocomplete suggestion — accept it (fish-style), don't send to the shell.
+            // Without a suggestion Tab goes to the PTY as usual (server-side completion isn't broken).
+            if (bytes == "\t" && state.hasSuggestion) {
+                state.acceptSuggestion()
+            } else {
+                state.typeInput(bytes)
+            }
+            return true
+        }
+        return false
+      }
       Box(
           Modifier
               .fillMaxSize()
               .focusRequester(focusRequester)
               // Focus reporting (DEC 1004): vim/tmux get ESC[I/ESC[O on terminal window focus.
               .onFocusChanged { state.notifyFocus(it.isFocused) }
-              .onPreviewKeyEvent { event ->
-                // Toggle the link (hand) cursor as Ctrl is pressed/released without moving the mouse.
-                // Runs before the KeyDown guard so a Ctrl KeyUp also clears it. Never consumes the event.
-                hoverPos?.let { updateHoverAffordance(it, event.isCtrlPressed) }
-                if (event.type != KeyEventType.KeyDown || closed) return@onPreviewKeyEvent false
-                // Desktop IME composition (pinyin, Japanese, etc.): while the input method is
-                // composing, physical keys belong to it (letters build the syllable, arrows/Enter
-                // pick the candidate) — consume them so nothing leaks into the PTY. Ctrl/Alt
-                // chords are exempt (IME doesn't own those, and Ctrl+C must stay SIGINT); Esc is
-                // exempt too so the IME receives it and ends the composition (the shell ignores
-                // the bare ESC the key path then sends).
-                if (desktopImeField && imeComposing && !event.isCtrlPressed && !event.isAltPressed && event.key != Key.Escape) {
-                    return@onPreviewKeyEvent true
-                }
-                if (isImeOwnedPrintable(imeInput, event.isCtrlPressed, event.isAltPressed, event.utf16CodePoint) &&
-                    isSoftKeyboardEvent(event)
-                ) {
-                    return@onPreviewKeyEvent true
-                }
-                // --- Reverse history search (Ctrl-R): while the overlay is open, keys drive it, not the PTY ---
-                if (state.reverseSearch.query != null) {
-                    when {
-                        event.key == Key.Escape -> state.reverseSearch.close()
-                        event.key == Key.Enter -> state.reverseSearch.accept()
-                        // Another Ctrl-R (or ↑) — to the next (older) match; ↓ — to newer.
-                        (event.isCtrlPressed && event.key == Key.R) || event.key == Key.DirectionUp ->
-                            state.reverseSearch.next()
-                        event.key == Key.DirectionDown -> state.reverseSearch.prev()
-                        // Delete — remove the selected command from history (manual cleanup), overlay open.
-                        event.key == Key.Delete -> state.reverseSearch.deleteSelected()
-                        event.key == Key.Backspace -> state.reverseSearch.backspace()
-                        else -> {
-                            val cp = event.utf16CodePoint
-                            if (cp in 0x20..0xFFFF && !event.isCtrlPressed && !event.isAltPressed) {
-                                state.reverseSearch.append(cp.toChar().toString())
-                            }
-                        }
-                    }
-                    return@onPreviewKeyEvent true
-                }
-                // Ctrl-R — open reverse history search (intercept from the shell, show our own overlay).
-                if (event.isCtrlPressed && event.key == Key.R) {
-                    state.reverseSearch.open()
-                    return@onPreviewKeyEvent true
-                }
-                // Shift+Tab — cycle autocomplete suggestion alternatives. Swallowed whenever a ghost
-                // is on screen, even one that cannot be accepted yet: letting it through sends ESC[Z,
-                // which the engine reads as navigation and drops the line it is tracking.
-                val ghostOnScreen = state.hasSuggestion || state.suggestionTail != null
-                if (event.isShiftPressed && event.key == Key.Tab && ghostOnScreen) {
-                    state.cycleSuggestion()
-                    return@onPreviewKeyEvent true
-                }
-                // Clipboard chords: Ctrl+Shift+C/V and the X11 pair Ctrl+Insert / Shift+Insert.
-                // Plain Ctrl+C stays SIGINT and bare Insert stays CSI 2~ — see [clipboardChord].
-                val clipboard = clipboardChord(
-                    ctrl = event.isCtrlPressed,
-                    shift = event.isShiftPressed,
-                    alt = event.isAltPressed,
-                    insertKey = event.isInsertKey(),
-                    key = event.key,
-                )
-                if (clipboard != null) {
-                    when (clipboard) {
-                        ClipboardChord.Copy -> copySelection()
-                        ClipboardChord.Paste -> pasteFromClipboard()
-                    }
-                    return@onPreviewKeyEvent true
-                }
-                val bytes = mapTerminalKey(
-                    key = event.key,
-                    ctrl = event.isCtrlPressed,
-                    codePoint = event.utf16CodePoint,
-                    alt = event.isAltPressed,
-                    shift = event.isShiftPressed,
-                    applicationCursor = state.applicationCursorKeys,
-                    applicationKeypad = state.applicationKeypad,
-                )
-                if (bytes != null) {
-                    state.clearSelection()
-                    textToolbar.hide()
-                    // Tab with an autocomplete suggestion — accept it (fish-style), don't send to the shell.
-                    // Without a suggestion Tab goes to the PTY as usual (server-side completion isn't broken).
-                    if (bytes == "\t" && state.hasSuggestion) {
-                        state.acceptSuggestion()
-                    } else {
-                        state.typeInput(bytes)
-                    }
-                    true
-                } else {
-                    false
-                }
-              }
+              .onPreviewKeyEvent { handleTerminalKey(it) }
               .focusable()
       ) {
       Text(
@@ -1240,9 +1246,19 @@ fun TerminalScreen(
               value = imeValue,
               onValueChange = { nv ->
                   // Desktop IME: a non-null composition range means the input method is still
-                  // composing (pinyin syllables); physical keys are consumed in onPreviewKeyEvent
-                  // while it lasts, so only committed text arrives here.
-                  imeComposing = nv.composition != null
+                  // composing (pinyin syllables); the field's text holds the unconfirmed
+                  // syllable, so nothing is sent until the candidate is committed and the
+                  // composition ends. Physical keys are consumed in handleTerminalKey while it
+                  // lasts. Touch (imeInput) keeps its historical behavior of forwarding every
+                  // change.
+                  val composing = nv.composition != null
+                  imeComposing = composing
+                  if (composing && desktopImeField) {
+                      // Follow the composition so the IME stays in sync; nothing is sent and
+                      // the anchor reset is deferred until the candidate is committed.
+                      imeValue = nv
+                      return@onValueChange
+                  }
                   val raw = imeDeltaToPty(ANCHOR, nv.text)
                   // sticky-ctrl etc. apply only to real input (not to an empty delta).
                   val out = if (raw.isEmpty()) raw else imeTransform?.invoke(raw) ?: raw
@@ -1263,7 +1279,12 @@ fun TerminalScreen(
                   }
                   imeValue = imeBaseline
               },
-              modifier = Modifier.size(1.dp).focusRequester(imeFocusRequester),
+              modifier = Modifier.size(1.dp)
+                  .focusRequester(imeFocusRequester)
+                  // Key handling lives on the field as well as the pane Box: when the field
+                  // holds focus (desktop CJK input) the Box's preview does not fire, and this
+                  // one is on the focused path. Whichever runs first consumes the event.
+                  .onPreviewKeyEvent { handleTerminalKey(it) },
               textStyle = TextStyle(color = Color.Transparent),
               cursorBrush = SolidColor(Color.Transparent),
               keyboardOptions = KeyboardOptions(
