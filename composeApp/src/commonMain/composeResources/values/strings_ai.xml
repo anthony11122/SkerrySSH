@@ -17,5 +17,18 @@
     <string name="assistant_attached">已发送 %1$d 条输出</string>
     <string name="assistant_copy">复制</string>
     <string name="assistant_edit">编辑</string>
+    <string name="agent_badge">Agent</string>
+    <string name="agent_state_thinking">Agent 思考中…</string>
+    <string name="agent_state_executing">执行中：%1$s</string>
+    <string name="agent_state_confirm">等待你的确认</string>
+    <string name="agent_state_asking">等待你的回答</string>
+    <string name="agent_state_done">任务完成</string>
+    <string name="agent_state_failed">任务失败</string>
+    <string name="agent_state_interrupted">已中断</string>
+    <string name="agent_confirm_run">确认执行</string>
+    <string name="agent_reject">拒绝</string>
+    <string name="agent_stop">停止 Agent</string>
+    <string name="agent_risk_hint">危险命令，需要你确认</string>
+    <string name="agent_toggle_tip">Agent 模式：AI 自主执行多步任务（危险命令仍需确认）</string>
     <string name="shell_tip_assistant">助手</string>
 </resources>

@@ -48,8 +48,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.skerry.shared.ai.AgentLoopState
 import app.skerry.shared.ai.AiProviderKind
 import app.skerry.shared.ai.AiRole
+import app.skerry.shared.ai.CommandRisk
 import app.skerry.shared.ai.local.LocalModelCatalog
 import app.skerry.ui.design.AnchoredDropdown
 import app.skerry.ui.design.HLine
@@ -117,6 +119,11 @@ internal fun AssistantPanel(
 ) {
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
+    // Agent mode executes through the same guarded input path as a confirmed command.
+    LaunchedEffect(terminal) {
+        controller.agentExecutor = { text -> terminal?.sendUserInputGuarded(text) }
+        controller.agentOutputSource = { terminal?.lastOutput() ?: "" }
+    }
     val actions = remember(terminal) {
         AssistantCommandActions(
             // A confirmed command is single-line ([AssistantAnswer]), so one CR runs exactly it.
@@ -130,9 +137,95 @@ internal fun AssistantPanel(
     Column(Modifier.width(ASSISTANT_PANEL_WIDTH).fillMaxHeight().background(Skerry.colors.surface)) {
         AssistantHeader(controller, modelLabel)
         HLine()
+        AgentBar(controller)
         AssistantFeed(controller, actions, Modifier.weight(1f))
         HLine()
         AssistantAskRow(controller, terminal, focusPending, onFocusConsumed)
+    }
+}
+
+/**
+ * Agent-mode strip: the loop's live state, the pending proposal with its risk, and the
+ * confirm/reject/stop actions. Only shown when agent mode is enabled for this host.
+ */
+@Composable
+private fun AgentBar(controller: SessionAssistantController) {
+    if (!controller.agentModeEnabled) return
+    val state = controller.agentState
+    if (state == AgentLoopState.Idle) return
+    Column(
+        Modifier.fillMaxWidth().background(Skerry.colors.surface2).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Sym("auto_awesome", size = 13.sp, color = Skerry.colors.cyanBright)
+            val stateText = when (state) {
+                AgentLoopState.Thinking -> stringResource(Res.string.agent_state_thinking)
+                AgentLoopState.Executing -> controller.agentExecutingCommand?.let {
+                    stringResource(Res.string.agent_state_executing, it)
+                } ?: stringResource(Res.string.agent_state_executing, "")
+                AgentLoopState.AwaitingConfirm -> stringResource(Res.string.agent_state_confirm)
+                AgentLoopState.AwaitingExecution -> stringResource(Res.string.agent_state_thinking)
+                AgentLoopState.Asking -> stringResource(Res.string.agent_state_asking)
+                AgentLoopState.Evaluating -> stringResource(Res.string.agent_state_thinking)
+                AgentLoopState.Done -> stringResource(Res.string.agent_state_done)
+                AgentLoopState.Failed -> stringResource(Res.string.agent_state_failed)
+                AgentLoopState.Interrupted -> stringResource(Res.string.agent_state_interrupted)
+                AgentLoopState.Idle -> ""
+            }
+            Txt(
+                stateText,
+                color = when (state) {
+                    AgentLoopState.Done -> Skerry.colors.teal
+                    AgentLoopState.Failed, AgentLoopState.Interrupted -> Skerry.colors.sunset
+                    AgentLoopState.AwaitingConfirm -> Skerry.colors.amber
+                    else -> Skerry.colors.dim
+                },
+                size = 11.5.sp,
+                weight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (controller.agentStepCount > 0) {
+                Txt("${controller.agentStepCount} 步", color = Skerry.colors.faint, size = 10.5.sp)
+            }
+            if (state != AgentLoopState.Done && state != AgentLoopState.Failed && state != AgentLoopState.Interrupted) {
+                IconBtn("stop", onClick = controller::agentStop, box = 24, icon = 14.sp, tooltip = stringResource(Res.string.agent_stop))
+            }
+        }
+        if (state == AgentLoopState.AwaitingConfirm) {
+            val proposal = controller.agentProposal
+            if (proposal != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Sym("warning", size = 14.sp, color = if (proposal.assessment.risk == CommandRisk.Danger) Skerry.colors.sunset else Skerry.colors.amber)
+                    Txt(
+                        proposal.command,
+                        color = Skerry.colors.text,
+                        size = 11.5.sp,
+                        font = LocalFonts.current.mono,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box(
+                        Modifier.clip(RoundedCornerShape(6.dp)).background(Skerry.colors.overlayMed)
+                            .clickable { controller.agentReject() }.padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Txt(stringResource(Res.string.agent_reject), color = Skerry.colors.dim, size = 11.sp)
+                    }
+                    Box(
+                        Modifier.clip(RoundedCornerShape(6.dp)).background(Skerry.colors.cyan)
+                            .clickable { controller.agentConfirm() }.padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Txt(
+                            if (proposal.assessment.risk == CommandRisk.Danger) stringResource(Res.string.agent_confirm_run) else stringResource(Res.string.assistant_run),
+                            color = Skerry.colors.ink, size = 11.sp, weight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -264,8 +357,13 @@ private fun AssistantAskRow(
     val submit = {
         val text = prompt.trim()
         if (text.isNotEmpty() && !controller.busy) {
-            // Context is read at send time, so it is the output the user is looking at.
-            controller.ask(text, outputs = recentOutputs(terminal, controller.contextOutputs))
+            if (controller.agentModeEnabled) {
+                // Agent mode: the question becomes a multi-step task; the loop drives it.
+                controller.startAgent(text)
+            } else {
+                // Context is read at send time, so it is the output the user is looking at.
+                controller.ask(text, outputs = recentOutputs(terminal, controller.contextOutputs))
+            }
             prompt = ""
         }
     }
@@ -336,10 +434,18 @@ private fun AssistantAskRow(
         }
         ContextChip(controller)
         // Send doubles as stop while an answer streams: one control, never two states at once.
+        // In agent mode stopping must tear down the whole loop (SIGINT + interrupt), not just
+        // cancel the stream — otherwise the loop is left half-alive and blocks new tasks.
         Box(
             Modifier.size(26.dp).clip(RoundedCornerShape(8.dp))
                 .background(if (controller.busy) Skerry.colors.overlayMed else Skerry.colors.cyan)
-                .clickable { if (controller.busy) controller.cancel() else submit() },
+                .clickable {
+                    if (controller.busy) {
+                        if (controller.agentModeEnabled) controller.agentStop() else controller.cancel()
+                    } else {
+                        submit()
+                    }
+                },
             contentAlignment = Alignment.Center,
         ) {
             if (controller.busy) {

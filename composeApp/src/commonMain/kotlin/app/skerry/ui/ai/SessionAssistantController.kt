@@ -4,6 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.skerry.shared.ai.AgentCommandProposal
+import app.skerry.shared.ai.AgentDirective
+import app.skerry.shared.ai.AgentLoopController
+import app.skerry.shared.ai.AgentLoopState
 import app.skerry.shared.ai.AiEndpoint
 import app.skerry.shared.ai.AiMessage
 import app.skerry.shared.ai.AiPolicy
@@ -14,10 +18,13 @@ import app.skerry.shared.ai.AiRoute
 import app.skerry.shared.ai.AiRouter
 import app.skerry.shared.ai.AiSettings
 import app.skerry.shared.ai.SecretRedactor
+import app.skerry.shared.ai.agentSystemPrompt
 import app.skerry.shared.ai.local.LocalModel
 import app.skerry.shared.ai.local.LocalModelCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Assistant panel controller: a conversation about one open session, under the host's [AiPolicy].
@@ -42,7 +49,7 @@ class SessionAssistantController(
     val policy: AiPolicy,
     private val settings: () -> AiSettings,
     providerFactory: (AiEndpoint) -> AiProvider,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     // Language for the reply (= UI language), read lazily per request so a locale change applies
     // without recreating the controller. English name of the language, e.g. "English", "Russian".
     private val responseLanguage: () -> String = { "English" },
@@ -156,9 +163,199 @@ class SessionAssistantController(
     /** Cancel and drop the conversation. */
     fun clear() {
         cancel()
+        agentStop()
         turns.clear()
         notice = null
     }
+
+    // ---------- Agent mode (v0.4.0) ----------
+    // The assistant can run a multi-step task with one-time authorization: the model proposes one
+    // command per round, the loop executes safe ones automatically (visible in the terminal) and
+    // pauses for the user on Danger proposals (or always, with agentForceConfirm). Terminal output
+    // fed back to the model is sanitized by the shared loop ([sanitizeOutputContext]).
+
+    /** The active agent loop; `null` when no task is in flight. Recreated per task from settings. */
+    var agentLoop by mutableStateOf<AgentLoopController?>(null); private set
+
+    /** Whether agent mode is on for this host (from settings; hides the bar's agent affordances). */
+    val agentModeEnabled: Boolean get() = settings().agentEnabled
+
+    /** How the loop's commands reach the shell; injected by the panel when a terminal is attached. */
+    var agentExecutor: ((String) -> Unit)? = null
+
+    /** Reads the output window of the last executed step; injected by the panel. */
+    var agentOutputSource: (() -> String)? = null
+
+    private var agentJob: Job? = null
+    private var agentTask: String = ""
+    private var unparsableRounds = 0
+
+    /** Start an agent task from [prompt]. No-op while busy/agent-running or with AI off. */
+    fun startAgent(prompt: String) {
+        val text = prompt.trim()
+        val active = agentLoop?.state
+        // An ASK pause is re-entered with the user's answer; everything else active blocks a new task.
+        if (busy || text.isEmpty() || !decision.aiEnabled ||
+            (active != null && active != AgentLoopState.Idle && active != AgentLoopState.Asking)
+        ) return
+        val current = settings()
+        val device = LocalModelCatalog.resolve(current.localModelId)
+        val route = AiRouter.route(decision, current, device, localInstalled(device))
+        if (route !is AiRoute.Use) {
+            notice = AiNotice.Blocked((route as AiRoute.Blocked).reason)
+            return
+        }
+        // Re-entering from an ASK keeps the same loop (history preserved); a fresh task creates one.
+        if (agentLoop == null || agentLoop!!.state == AgentLoopState.Done ||
+            agentLoop!!.state == AgentLoopState.Failed || agentLoop!!.state == AgentLoopState.Interrupted
+        ) {
+            agentLoop = AgentLoopController(
+                maxSteps = current.agentMaxSteps,
+                maxMinutes = current.agentMaxMinutes,
+                forceConfirmAll = current.agentForceConfirm,
+            )
+        }
+        agentTask = text
+        unparsableRounds = 0
+        agentLoop!!.start()
+        agentRequest(route.endpoint)
+    }
+
+    /** The user confirmed the pending Danger proposal (or forceConfirmAll); runs it. */
+    fun agentConfirm() {
+        val loop = agentLoop ?: return
+        if (loop.state != AgentLoopState.AwaitingConfirm) return
+        executeProposal(loop)
+    }
+
+    /** The user rejected the pending proposal; the model continues without that command. */
+    fun agentReject() {
+        val loop = agentLoop ?: return
+        loop.reject()
+        agentRequest()
+    }
+
+    /** Stop the agent: interrupt the loop, cancel any stream, SIGINT an in-flight command. */
+    fun agentStop() {
+        val loop = agentLoop ?: return
+        if (loop.inFlightCommand() != null) agentExecutor?.invoke("\u0003")
+        loop.interrupt()
+        agentJob?.cancel()
+        agentJob = null
+        streaming = null
+        busy = false
+    }
+
+    /** One model round: build the prompt from the loop's history + last sanitized output. */
+    private fun agentRequest(endpoint: AiEndpoint? = null) {
+        val loop = agentLoop ?: return
+        val guard = loop.guard()
+        if (guard != null) {
+            loop.fail(guard)
+            agentSummary = guard
+            busy = false
+            return
+        }
+        val current = settings()
+        val device = LocalModelCatalog.resolve(current.localModelId)
+        val route = endpoint?.let { AiRoute.Use(it) } ?: AiRouter.route(decision, current, device, localInstalled(device))
+        if (route !is AiRoute.Use) {
+            loop.fail("AI unavailable")
+            agentSummary = "AI unavailable"
+            busy = false
+            return
+        }
+        busy = true
+        streaming = ""
+        val gen = ++generation
+        val messages = listOf(
+            AiMessage(AiRole.SYSTEM, agentSystemPrompt(responseLanguage(), loop.executed, loop.lastOutput)),
+            AiMessage(AiRole.USER, agentTask),
+        )
+        agentJob = runner.launch(
+            temperature = AGENT_TEMPERATURE,
+            endpoint = route.endpoint,
+            messages = messages,
+            onDelta = { if (gen == generation) streaming = it },
+            onComplete = { reply -> if (gen == generation) handleAgentReply(reply.trim()) },
+            onError = { if (gen == generation) { agentLoop?.fail("AI error"); agentSummary = "AI error"; busy = false } },
+            onFinally = { if (gen == generation) streaming = null },
+        )
+    }
+
+    /** Route one model reply through the loop state machine. */
+    private fun handleAgentReply(raw: String) {
+        val loop = agentLoop ?: return
+        when (val directive = loop.onModelReply(raw)) {
+            is AgentDirective.Execute -> when (loop.state) {
+                AgentLoopState.AwaitingExecution -> executeProposal(loop)
+                AgentLoopState.AwaitingConfirm -> { /* UI shows confirm/reject */ }
+                else -> {}
+            }
+            is AgentDirective.Done -> {
+                agentSummary = directive.summary
+                turns.add(AiTurn(AiRole.ASSISTANT, directive.summary))
+                busy = false
+            }
+            is AgentDirective.Ask -> {
+                agentQuestion = directive.question
+                turns.add(AiTurn(AiRole.ASSISTANT, directive.question))
+                busy = false
+            }
+            AgentDirective.Unparsable -> {
+                // Ask the model for a valid directive; the loop stays in Thinking. Bounded: three
+                // unparsable replies in a row fail the task instead of looping forever.
+                if (++unparsableRounds >= MAX_UNPARSABLE_ROUNDS) {
+                    loop.fail("Model reply could not be parsed")
+                    agentSummary = "Model reply could not be parsed"
+                    busy = false
+                } else {
+                    agentRequest()
+                }
+            }
+        }
+    }
+
+    /** Send the pending proposal to the shell and schedule the output capture + next round. */
+    private fun executeProposal(loop: AgentLoopController) {
+        val command = loop.confirm() ?: return
+        busy = true
+        agentExecutingCommand = command
+        agentExecutor?.invoke(command + "\r")
+        agentJob = scope.launch {
+            delay(AGENT_STEP_WAIT_MS)
+            if (loop.state != AgentLoopState.Executing) return@launch
+            val out = agentOutputSource?.invoke() ?: ""
+            loop.onStepComplete(out)
+            agentStepCount = loop.lastStepIndex
+            val guard = loop.guard()
+            if (guard != null) {
+                loop.fail(guard)
+                agentSummary = guard
+                busy = false
+            } else {
+                agentRequest()
+            }
+        }
+    }
+
+    /** The current loop state (for the panel), or [AgentLoopState.Idle]. */
+    val agentState: AgentLoopState get() = agentLoop?.state ?: AgentLoopState.Idle
+
+    /** The pending proposal awaiting confirmation, if any. */
+    val agentProposal: AgentCommandProposal? get() = agentLoop?.proposal
+
+    /** The model's question while [AgentLoopState.Asking]. */
+    var agentQuestion by mutableStateOf<String?>(null); private set
+
+    /** Final summary of the last task (Done/Failed/Interrupted). */
+    var agentSummary by mutableStateOf<String?>(null); private set
+
+    /** Steps executed in the current task. */
+    var agentStepCount by mutableStateOf(0); private set
+
+    /** The command currently in flight (for the bar's executing state). */
+    var agentExecutingCommand by mutableStateOf<String?>(null); private set
 
     private fun redact(text: String): String = if (decision.sanitizeSecrets) SecretRedactor.redact(text) else text
 
@@ -171,6 +368,15 @@ class SessionAssistantController(
 
         /** Low, like the command path: this answers about a concrete machine, it doesn't write prose. */
         const val ANSWER_TEMPERATURE = 0.3
+
+        /** Agent rounds want a bit more variety than one-shot commands, still low for small models. */
+        const val AGENT_TEMPERATURE = 0.2
+
+        /** How long the loop waits for a step's output before capturing it and asking the model. */
+        const val AGENT_STEP_WAIT_MS = 6_000L
+
+        /** Consecutive unparsable model replies that fail the task instead of re-prompting. */
+        const val MAX_UNPARSABLE_ROUNDS = 3
 
         /** The question plus the output it is about, labelled so the model doesn't read it as a request. */
         internal fun withContext(question: String, context: String): String =

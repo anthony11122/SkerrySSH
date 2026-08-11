@@ -128,6 +128,44 @@ private fun LiveAiSection(ai: app.skerry.ui.ai.AiAssistantController) {
     }
     SectionDivider()
 
+    // Agent mode (v0.4.0): global on/off + guardrail knobs. The loop itself lives in the
+    // terminal assistant panel; this is where it is enabled and bounded.
+    var agentOpen by remember { mutableStateOf(false) }
+    AiQuickChatHeader(
+        stringResource(Res.string.settings_ai_agent),
+        stringResource(Res.string.settings_ai_agent_desc),
+        open = agentOpen,
+        onToggle = { agentOpen = !agentOpen },
+    )
+    if (agentOpen) {
+        Spacer(Modifier.height(8.dp))
+        val s = ai.settings
+        var agentEnabled by remember { mutableStateOf(s.agentEnabled) }
+        var agentForce by remember { mutableStateOf(s.agentForceConfirm) }
+        SettingToggleRow(
+            stringResource(Res.string.settings_ai_agent),
+            stringResource(Res.string.settings_ai_agent_desc),
+            agentEnabled,
+        ) {
+            agentEnabled = it
+            ai.saveAgent(agentEnabled, s.agentMaxSteps, s.agentMaxMinutes, agentForce)
+        }
+        SettingToggleRow(
+            stringResource(Res.string.settings_ai_agent_force),
+            stringResource(Res.string.settings_ai_agent_force_desc),
+            agentForce,
+        ) {
+            agentForce = it
+            ai.saveAgent(agentEnabled, s.agentMaxSteps, s.agentMaxMinutes, agentForce)
+        }
+        Txt(
+            stringResource(Res.string.settings_ai_agent_hint, s.agentMaxSteps, s.agentMaxMinutes),
+            color = Skerry.colors.faint, size = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+    }
+    SectionDivider()
+
     var chatOpen by remember { mutableStateOf(false) }
     AiQuickChatHeader(
         stringResource(Res.string.settings_ai_quick_chat),

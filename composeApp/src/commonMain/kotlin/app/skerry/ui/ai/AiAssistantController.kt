@@ -191,6 +191,18 @@ class AiAssistantController(
         persistSettings(settings.copy(localModelId = id))
     }
 
+    /** Agent mode (v0.4.0): global on/off and the loop's guardrails; persisted immediately. */
+    fun saveAgent(enabled: Boolean, maxSteps: Int, maxMinutes: Int, forceConfirm: Boolean) {
+        persistSettings(
+            settings.copy(
+                agentEnabled = enabled,
+                agentMaxSteps = maxSteps.coerceIn(1, 100),
+                agentMaxMinutes = maxMinutes.coerceIn(1, 120),
+                agentForceConfirm = forceConfirm,
+            ),
+        )
+    }
+
     private fun persistSettings(next: AiSettings) {
         persist(next)
         applySettings(next)

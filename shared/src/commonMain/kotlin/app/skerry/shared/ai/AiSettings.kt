@@ -28,6 +28,11 @@ data class AiSettings(
     val baseUrl: String = OpenAiConfig.DEFAULT_BASE_URL,
     val provider: AiProviderKind = AiProviderKind.CLOUD,
     val localModelId: String = "",
+    // Agent mode (v0.4.0): the AI runs multi-step tasks with one-time authorization.
+    val agentEnabled: Boolean = false,
+    val agentMaxSteps: Int = 20,
+    val agentMaxMinutes: Int = 10,
+    val agentForceConfirm: Boolean = false,
 ) {
     /** Whether the external (BYOK) provider is configured — a non-blank key. See [AiRouter] for the local branch. */
     val isConfigured: Boolean get() = apiKey.isNotBlank()

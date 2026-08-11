@@ -426,3 +426,159 @@ class SessionAssistantControllerTest {
         assertNull(c.notice)
     }
 }
+
+// ---------- Agent mode (v0.4.0) ----------
+
+/** A provider that answers each chat call from a queue, so a multi-round agent loop is scriptable. */
+private class QueueProvider(private val replies: List<List<String>>) : AiProvider {
+    var calls = 0
+    var lastMessages: List<AiMessage> = emptyList()
+    override fun chat(request: AiChatRequest): Flow<AiDelta> = flow {
+        lastMessages = request.messages
+        val reply = replies.getOrNull(calls++) ?: emptyList()
+        reply.forEach { emit(AiDelta(it)) }
+    }
+    override suspend fun close() {}
+}
+
+private fun agentSettings() = AiSettings(apiKey = "sk-x", agentEnabled = true)
+
+private fun agentController(
+    provider: AiProvider,
+    scope: CoroutineScope,
+    settings: AiSettings = agentSettings(),
+) = SessionAssistantController(
+    AiPolicy.Permissive,
+    settings = { settings },
+    providerFactory = { provider },
+    scope = scope,
+)
+
+@Test
+fun `agent executes a safe command automatically and completes on DONE`() = runTest {
+    val p = QueueProvider(
+        listOf(
+            listOf("ACTION: CMD df -h\nACTION: INFO: disk usage"),
+            listOf("ACTION: DONE 磁盘使用正常，剩余 50G"),
+        ),
+    )
+    val c = agentController(p, this)
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+    c.agentOutputSource = { "Filesystem 50G used / 100G total" }
+
+    c.startAgent("check disk usage")
+    advanceUntilIdle()
+
+    assertEquals(listOf("df -h\r"), sent, "safe command runs without confirmation")
+    assertEquals(1, c.agentStepCount)
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Done, c.agentState)
+    assertEquals("磁盘使用正常，剩余 50G", c.agentSummary)
+    assertEquals("磁盘使用正常，剩余 50G", c.turns.last().text)
+}
+
+@Test
+fun `agent danger command waits for confirmation and runs on confirm`() = runTest {
+    val p = QueueProvider(listOf(listOf("ACTION: CMD rm -rf /tmp/old")))
+    val c = agentController(p, this)
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+
+    c.startAgent("clean up /tmp/old")
+    advanceUntilIdle()
+
+    assertEquals(app.skerry.shared.ai.AgentLoopState.AwaitingConfirm, c.agentState)
+    assertTrue(sent.isEmpty(), "danger command must not auto-run")
+    assertEquals("rm -rf /tmp/old", c.agentProposal?.command)
+
+    c.agentConfirm()
+    advanceUntilIdle()
+
+    assertEquals(listOf("rm -rf /tmp/old\r"), sent)
+}
+
+@Test
+fun `agent reject skips the command and lets the model continue`() = runTest {
+    val p = QueueProvider(
+        listOf(
+            listOf("ACTION: CMD rm -rf /tmp/old"),
+            listOf("ACTION: DONE 跳过删除，任务结束"),
+        ),
+    )
+    val c = agentController(p, this)
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+
+    c.startAgent("clean up /tmp/old")
+    advanceUntilIdle()
+    assertEquals(app.skerry.shared.ai.AgentLoopState.AwaitingConfirm, c.agentState)
+
+    c.agentReject()
+    advanceUntilIdle()
+
+    assertTrue(sent.isEmpty(), "rejected command must never reach the shell")
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Done, c.agentState)
+}
+
+@Test
+fun `agent stop interrupts and sends SIGINT to an in-flight command`() = runTest {
+    val p = QueueProvider(listOf(listOf("ACTION: CMD sleep 30")))
+    val c = agentController(p, this)
+    val sent = mutableListOf<String>()
+    c.agentExecutor = { sent += it }
+
+    c.startAgent("wait a bit")
+    advanceUntilIdle()
+    assertEquals(listOf("sleep 30\r"), sent)
+
+    c.agentStop()
+    advanceUntilIdle()
+
+    assertEquals(listOf("sleep 30\r", "\u0003"), sent, "SIGINT must follow the in-flight command")
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Interrupted, c.agentState)
+}
+
+@Test
+fun `agent ask pauses for the user and re-enters with the answer`() = runTest {
+    val p = QueueProvider(
+        listOf(
+            listOf("ACTION: ASK 要清理哪个目录？"),
+            listOf("ACTION: DONE 已清理 /tmp"),
+        ),
+    )
+    val c = agentController(p, this)
+
+    c.startAgent("clean up some directory")
+    advanceUntilIdle()
+
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Asking, c.agentState)
+    assertEquals("要清理哪个目录？", c.agentQuestion)
+    assertEquals("要清理哪个目录？", c.turns.last().text)
+
+    c.startAgent("/tmp") // user's answer continues the same loop
+    advanceUntilIdle()
+
+    assertEquals(app.skerry.shared.ai.AgentLoopState.Done, c.agentState)
+    assertEquals("已清理 /tmp", c.agentSummary)
+}
+
+@Test
+fun `agent output fed back to the model is sanitized`() = runTest {
+    val p = QueueProvider(
+        listOf(
+            listOf("ACTION: CMD df -h"),
+            listOf("ACTION: DONE done"),
+        ),
+    )
+    val c = agentController(p, this)
+    c.agentExecutor = {}
+    c.agentOutputSource = { "\u001b[31mred\u001b[0m\n\n\n  text" }
+
+    c.startAgent("check disk")
+    advanceUntilIdle()
+
+    // The second call's system prompt must carry the sanitized output (no ANSI, blank runs collapsed).
+    val system = p.lastMessages.first { it.role == AiRole.SYSTEM }.text
+    assertTrue(system.contains("red\n  text"), "output must be ANSI-stripped: $system")
+    assertFalse(system.contains("\u001b"), "control bytes must not reach the model")
+}
