@@ -1,5 +1,6 @@
 package app.skerry.ui.sftp
 
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -10,8 +11,11 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.pressKey
 import app.skerry.ui.app.UiTags
 import app.skerry.ui.desktop.onScreen
 import app.skerry.ui.desktop.runDesktopShell
@@ -75,6 +79,12 @@ class SftpPanelTest {
         onNodeWithContentDescription(string(Res.string.sftp_columns)).performClick()
         waitForIdle()
         onNodeWithContentDescription(string(Res.string.sftp_col_modified)).assertIsOn().performClick()
+        waitForIdle()
+        // The menu stays open after a toggle. With the English locale the menu item reads
+        // "Modified" while the headers read "MODIFIED", so the text query never sees it; in
+        // Chinese there is no case distinction, so the open menu's item text would be counted
+        // as a column header. Close the menu before asserting the headers are gone.
+        onRoot().performKeyInput { pressKey(Key.Escape) }
         waitForIdle()
 
         assertEquals(0, columnHeaders(header))
