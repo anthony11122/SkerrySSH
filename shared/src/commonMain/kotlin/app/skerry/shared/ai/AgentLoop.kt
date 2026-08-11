@@ -251,7 +251,9 @@ class AgentLoopController(
      */
     fun guard(): String? {
         if (executed.size >= maxSteps) return "Step limit reached ($maxSteps)"
-        if (startedAtMillis > 0L && nowMillis() - startedAtMillis > maxMinutes * 60_000L) {
+        // startedAtMillis is a Monotonic mark (relative, can be 0 right after start()), so the
+        // elapsed comparison is relative too: elapsed > maxMinutes*60_000 is exact either way.
+        if (nowMillis() - startedAtMillis > maxMinutes * 60_000L) {
             return "Time limit reached ($maxMinutes min)"
         }
         return null
