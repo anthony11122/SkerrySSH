@@ -112,14 +112,7 @@ class HostMetricsController(
      * unable to serve metrics.
      */
     private suspend fun pollOnce(full: Boolean): Boolean {
-        val windows = platform == MetricsPlatform.Windows
-        val cmd = when {
-            windows && full -> FULL_WINDOWS_COMMAND
-            windows -> WINDOWS_COMMAND
-            full -> FULL_METRICS_COMMAND
-            else -> METRICS_COMMAND
-        }
-        val result = runCatching { exec(cmd) }
+        val result = runCatching { exec(commandFor(full)) }
             .onFailure {
                 if (it is CancellationException) throw it
                 // A transport with no exec channel at all (telnet/serial/Mosh) can never
@@ -130,17 +123,32 @@ class HostMetricsController(
                 }
             }
             .getOrNull()
-        if (result == null) {
-            // A dropped channel is a hiccup while the host has already answered once; a channel
-            // that has never answered is a host that cannot serve metrics at all (a restricted
-            // shell rejecting the command), and saying so beats counting seconds under "waiting
-            // for data" forever.
-            if (++execFailures >= EXEC_FAILURES_BEFORE_VERDICT && metrics == null) {
-                availability = MetricsAvailability.Unsupported
-                return false
-            }
-            return true
+        return if (result == null) handleExecFailure() else handleResult(result, full)
+    }
+
+    /** The metrics command for the current platform; while unknown, the Linux chain is tried. */
+    private fun commandFor(full: Boolean): String = when {
+        platform == MetricsPlatform.Windows && full -> FULL_WINDOWS_COMMAND
+        platform == MetricsPlatform.Windows -> WINDOWS_COMMAND
+        full -> FULL_METRICS_COMMAND
+        else -> METRICS_COMMAND
+    }
+
+    /**
+     * A dropped channel is a hiccup while the host has already answered once; a channel that has
+     * never answered is a host that cannot serve metrics at all (a restricted shell rejecting the
+     * command). `false` means the verdict was reached and polling must stop.
+     */
+    private fun handleExecFailure(): Boolean {
+        if (++execFailures >= EXEC_FAILURES_BEFORE_VERDICT && metrics == null) {
+            availability = MetricsAvailability.Unsupported
+            return false
         }
+        return true
+    }
+
+    /** Parses and publishes one answer; a non-parsing answer probes Windows while unknown. */
+    private fun handleResult(result: ExecResult, full: Boolean): Boolean {
         execFailures = 0
         val parsed = parseHostMetrics(result.stdout)
         if (parsed != null) {
@@ -150,30 +158,26 @@ class HostMetricsController(
             publish(parsed, full)
             return true
         }
-        if (platform != null) {
-            // Windows locked, but the probe output stopped parsing — a verdict rather than an
-            // endless "…" over pointless round-trips.
-            if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
-                availability = MetricsAvailability.Unsupported
-                return false
-            }
-            return true
-        }
         // The Linux /proc output doesn't parse — this may be a Windows host whose shell rejected
-        // the whole chain. Try the PowerShell probe once; success locks Windows, failure keeps
-        // the unknown platform and the unparsable counter settles the verdict (restricted shell,
-        // other OS, ...).
-        val winResult = runCatching { exec(WINDOWS_COMMAND) }.getOrNull()
-        val winParsed = winResult?.stdout?.let { parseHostMetrics(it) }
-        if (winParsed != null) {
-            platform = MetricsPlatform.Windows
-            unparsablePolls = 0
-            publish(winParsed, full)
-            return true
+        // the whole chain. Try the PowerShell probe once; success locks Windows.
+        if (platform == null) {
+            val winParsed = runCatching { exec(WINDOWS_COMMAND) }
+                .getOrNull()?.stdout?.let { parseHostMetrics(it) }
+            if (winParsed != null) {
+                platform = MetricsPlatform.Windows
+                unparsablePolls = 0
+                publish(winParsed, full)
+                return true
+            }
         }
+        // Output that never parses (or stopped parsing on a locked platform) is a verdict rather
+        // than an endless "…" over pointless round-trips.
+        return handleUnparsable()
+    }
+
+    /** Counts one unparsable answer; `false` when the three-strike verdict is reached. */
+    private fun handleUnparsable(): Boolean {
         if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
-            // The host answers but the output is neither Linux /proc nor the Windows probe —
-            // retrying won't change that.
             availability = MetricsAvailability.Unsupported
             return false
         }
