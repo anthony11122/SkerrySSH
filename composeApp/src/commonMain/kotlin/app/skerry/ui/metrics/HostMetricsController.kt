@@ -148,7 +148,7 @@ class HostMetricsController(
     }
 
     /** Parses and publishes one answer; a non-parsing answer probes Windows while unknown. */
-    private fun handleResult(result: ExecResult, full: Boolean): Boolean {
+    private suspend fun handleResult(result: ExecResult, full: Boolean): Boolean {
         execFailures = 0
         val parsed = parseHostMetrics(result.stdout)
         if (parsed != null) {
