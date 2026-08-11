@@ -95,70 +95,89 @@ class HostMetricsController(
         job = scope.launch {
             while (isActive) {
                 val full = polls++ % FULL_POLL_EVERY == 0
-                val windows = platform == MetricsPlatform.Windows
-                val cmd = when {
-                    windows && full -> FULL_WINDOWS_COMMAND
-                    windows -> WINDOWS_COMMAND
-                    full -> FULL_METRICS_COMMAND
-                    else -> METRICS_COMMAND
-                }
-                val result = runCatching { exec(cmd) }
-                    .onFailure {
-                        if (it is CancellationException) throw it
-                        // A transport with no exec channel at all (telnet/serial/Mosh) can never
-                        // answer — a verdict, not a hiccup.
-                        if (it is UnsupportedOperationException) {
-                            availability = MetricsAvailability.Unsupported
-                            return@launch
-                        }
-                    }
-                    .getOrNull()
-                if (result == null) {
-                    // A dropped channel is a hiccup while the host has already answered once; a
-                    // channel that has never answered is a host that cannot serve metrics at all
-                    // (a restricted shell rejecting the command), and saying so beats counting
-                    // seconds under "waiting for data" forever.
-                    if (++execFailures >= EXEC_FAILURES_BEFORE_VERDICT && metrics == null) {
-                        availability = MetricsAvailability.Unsupported
-                        return@launch
-                    }
-                } else {
-                    execFailures = 0
-                    val parsed = parseHostMetrics(result.stdout)
-                    if (parsed != null) {
-                        // First parseable answer locks the platform family for this session.
-                        platform = platform ?: MetricsPlatform.Linux
-                        unparsablePolls = 0
-                        publish(parsed, full)
-                    } else if (platform == null) {
-                        // The Linux /proc output doesn't parse — this may be a Windows host whose
-                        // shell rejected the whole chain. Try the PowerShell probe once; success
-                        // locks Windows, failure keeps the unknown platform and the unparsable
-                        // counter below settles the verdict (restricted shell, other OS, ...).
-                        val winResult = runCatching { exec(WINDOWS_COMMAND) }.getOrNull()
-                        val winParsed = winResult?.stdout?.let { parseHostMetrics(it) }
-                        if (winParsed != null) {
-                            platform = MetricsPlatform.Windows
-                            unparsablePolls = 0
-                            publish(winParsed, full)
-                        } else if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
-                            // The host answers but the output is neither Linux /proc nor the
-                            // Windows probe — retrying won't change that.
-                            availability = MetricsAvailability.Unsupported
-                            return@launch
-                        }
-                    } else if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
-                        // Windows locked, but the probe output stopped parsing — a verdict rather
-                        // than an endless "…" over pointless round-trips.
-                        availability = MetricsAvailability.Unsupported
-                        return@launch
-                    }
-                }
+                // False stops the loop: an exec-less transport or output that can never parse is
+                // a verdict, not a hiccup, and retrying would burn round-trips on nothing.
+                if (!pollOnce(full)) return@launch
                 // Leaves early when the screen asks for a poll now ([refreshNow]); otherwise this is
                 // the plain interval wait.
                 withTimeoutOrNull(intervalMs) { wake.receive() }
             }
         }
+    }
+
+    /**
+     * One poll cycle: run the command for the current platform (probing Windows while unknown),
+     * parse the answer and publish it. Returns `false` when polling must stop for good — either
+     * no exec channel at all, or enough consecutive failures/unparsable answers to call the host
+     * unable to serve metrics.
+     */
+    private suspend fun pollOnce(full: Boolean): Boolean {
+        val windows = platform == MetricsPlatform.Windows
+        val cmd = when {
+            windows && full -> FULL_WINDOWS_COMMAND
+            windows -> WINDOWS_COMMAND
+            full -> FULL_METRICS_COMMAND
+            else -> METRICS_COMMAND
+        }
+        val result = runCatching { exec(cmd) }
+            .onFailure {
+                if (it is CancellationException) throw it
+                // A transport with no exec channel at all (telnet/serial/Mosh) can never
+                // answer — a verdict, not a hiccup.
+                if (it is UnsupportedOperationException) {
+                    availability = MetricsAvailability.Unsupported
+                    return false
+                }
+            }
+            .getOrNull()
+        if (result == null) {
+            // A dropped channel is a hiccup while the host has already answered once; a channel
+            // that has never answered is a host that cannot serve metrics at all (a restricted
+            // shell rejecting the command), and saying so beats counting seconds under "waiting
+            // for data" forever.
+            if (++execFailures >= EXEC_FAILURES_BEFORE_VERDICT && metrics == null) {
+                availability = MetricsAvailability.Unsupported
+                return false
+            }
+            return true
+        }
+        execFailures = 0
+        val parsed = parseHostMetrics(result.stdout)
+        if (parsed != null) {
+            // First parseable answer locks the platform family for this session.
+            platform = platform ?: MetricsPlatform.Linux
+            unparsablePolls = 0
+            publish(parsed, full)
+            return true
+        }
+        if (platform != null) {
+            // Windows locked, but the probe output stopped parsing — a verdict rather than an
+            // endless "…" over pointless round-trips.
+            if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
+                availability = MetricsAvailability.Unsupported
+                return false
+            }
+            return true
+        }
+        // The Linux /proc output doesn't parse — this may be a Windows host whose shell rejected
+        // the whole chain. Try the PowerShell probe once; success locks Windows, failure keeps
+        // the unknown platform and the unparsable counter settles the verdict (restricted shell,
+        // other OS, ...).
+        val winResult = runCatching { exec(WINDOWS_COMMAND) }.getOrNull()
+        val winParsed = winResult?.stdout?.let { parseHostMetrics(it) }
+        if (winParsed != null) {
+            platform = MetricsPlatform.Windows
+            unparsablePolls = 0
+            publish(winParsed, full)
+            return true
+        }
+        if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
+            // The host answers but the output is neither Linux /proc nor the Windows probe —
+            // retrying won't change that.
+            availability = MetricsAvailability.Unsupported
+            return false
+        }
+        return true
     }
 
     /** Polls now instead of waiting out the rest of the interval (the screen's refresh button). */
@@ -309,7 +328,7 @@ class HostMetricsController(
             "powershell.exe -NoProfile -NonInteractive -EncodedCommand CgAkAEUAcgByAG8AcgBBAGMAdABpAG8AbgBQAHIAZQBmAGUAcgBlAG4AYwBlAD0AJwBTAGkAbABlAG4AdABsAHkAQwBvAG4AdABpAG4AdQBlACcACgAkAG8AcwA9AEcAZQB0AC0AQwBpAG0ASQBuAHMAdABhAG4AYwBlACAAVwBpAG4AMwAyAF8ATwBwAGUAcgBhAHQAaQBuAGcAUwB5AHMAdABlAG0ACgAkAGMAPQBHAGUAdAAtAEMAbwB1AG4AdABlAHIAIAAnAFwAUAByAG8AYwBlAHMAcwBvAHIAKABfAFQAbwB0AGEAbAApAFwAJQAgAFAAcgBvAGMAZQBzAHMAbwByACAAVABpAG0AZQAnAAoAUwB0AGEAcgB0AC0AUwBsAGUAZQBwACAALQBNAGkAbABsAGkAcwBlAGMAbwBuAGQAcwAgADQAMAAwAAoAJABjADIAPQBHAGUAdAAtAEMAbwB1AG4AdABlAHIAIAAnAFwAUAByAG8AYwBlAHMAcwBvAHIAKABfAFQAbwB0AGEAbAApAFwAJQAgAFAAcgBvAGMAZQBzAHMAbwByACAAVABpAG0AZQAnAAoAZQBjAGgAbwAgACgAJwBjAHAAdQAgACcAKwBbAG0AYQB0AGgAXQA6ADoAUgBvAHUAbgBkACgAKAAkAGMALgBDAG8AdQBuAHQAZQByAFMAYQBtAHAAbABlAHMAWwAwAF0ALgBDAG8AbwBrAGUAZABWAGEAbAB1AGUAKwAkAGMAMgAuAEMAbwB1AG4AdABlAHIAUwBhAG0AcABsAGUAcwBbADAAXQAuAEMAbwBvAGsAZQBkAFYAYQBsAHUAZQApAC8AMgAsADEAKQApAAoAZQBjAGgAbwAgACcAQABNAEUATQAnAAoAJAB0AG0APQBbAGwAbwBuAGcAXQAkAG8AcwAuAFQAbwB0AGEAbABWAGkAcwBpAGIAbABlAE0AZQBtAG8AcgB5AFMAaQB6AGUAKgAxADAAMgA0AAoAJABmAG0APQBbAGwAbwBuAGcAXQAkAG8AcwAuAEYAcgBlAGUAUABoAHkAcwBpAGMAYQBsAE0AZQBtAG8AcgB5ACoAMQAwADIANAAKAGUAYwBoAG8AIAAoACcATQBlAG0AOgAgACcAKwAkAHQAbQArACcAIAAnACsAKAAkAHQAbQAtACQAZgBtACkAKQAKAGUAYwBoAG8AIAAnAEAARABJAFMASwAnAAoARwBlAHQALQBDAGkAbQBJAG4AcwB0AGEAbgBjAGUAIABXAGkAbgAzADIAXwBMAG8AZwBpAGMAYQBsAEQAaQBzAGsAIAAtAEYAaQBsAHQAZQByACAAJwBEAHIAaQB2AGUAVAB5AHAAZQA9ADMAJwAgAHwAIABGAG8AcgBFAGEAYwBoAC0ATwBiAGoAZQBjAHQAIAB7ACAAJAB0AD0AWwBsAG8AbgBnAF0AJABfAC4AUwBpAHoAZQA7ACAAJABmAD0AWwBsAG8AbgBnAF0AJABfAC4ARgByAGUAZQBTAHAAYQBjAGUAOwAgAGkAZgAoACQAdAAgAC0AZwB0ACAAMAApAHsAIAAkAHUAPQAkAHQALQAkAGYAOwAgAGUAYwBoAG8AIAAoACQAXwAuAEQAZQB2AGkAYwBlAEkARAArACcAIAAnACsAWwBsAG8AbgBnAF0AKAAkAHQALwAxADAAMgA0ACkAKwAnACAAJwArAFsAbABvAG4AZwBdACgAJAB1AC8AMQAwADIANAApACsAJwAgACcAKwBbAGwAbwBuAGcAXQAoACQAZgAvADEAMAAyADQAKQArACcAIAAnACsAWwBpAG4AdABdACgAMQAwADAAKgAkAHUALwAkAHQAKQArACcAJQAgACcAKwAkAF8ALgBEAGUAdgBpAGMAZQBJAEQAKQAgAH0AIAB9AAoAZQBjAGgAbwAgACcAQABOAEUAVAAnAAoARwBlAHQALQBDAGkAbQBJAG4AcwB0AGEAbgBjAGUAIABXAGkAbgAzADIAXwBQAGUAcgBmAFIAYQB3AEQAYQB0AGEAXwBUAGMAcABpAHAAXwBOAGUAdAB3AG8AcgBrAEkAbgB0AGUAcgBmAGEAYwBlACAAfAAgAFcAaABlAHIAZQAtAE8AYgBqAGUAYwB0ACAAewAgACQAXwAuAE4AYQBtAGUAIAAtAG4AZQAgACcATABvAG8AcABiAGEAYwBrACcAIAB9ACAAfAAgAEYAbwByAEUAYQBjAGgALQBPAGIAagBlAGMAdAAgAHsAIABlAGMAaABvACAAKAAkAF8ALgBOAGEAbQBlACsAJwA6ACAAJwArACQAXwAuAEIAeQB0AGUAcwBSAGUAYwBlAGkAdgBlAGQAUABlAHIAcwBlAGMAKwAnACAAMAAgADAAIAAwACAAMAAgADAAIAAwACAAMAAgACcAKwAkAF8ALgBCAHkAdABlAHMAUwBlAG4AdABQAGUAcgBzAGUAYwArACcAIAAwACAAMAAgADAAIAAwACAAMAAgADAAIAAwACcAKQAgAH0ACgBlAGMAaABvACAAJwBAAFAAUgBPAEMAJwAKAEcAZQB0AC0AUAByAG8AYwBlAHMAcwAgAHwAIABTAG8AcgB0AC0ATwBiAGoAZQBjAHQAIABDAFAAVQAgAC0ARABlAHMAYwBlAG4AZABpAG4AZwAgAHwAIABTAGUAbABlAGMAdAAtAE8AYgBqAGUAYwB0ACAALQBGAGkAcgBzAHQAIAA4ACAAfAAgAEYAbwByAEUAYQBjAGgALQBPAGIAagBlAGMAdAAgAHsAIAAkAGMAdgA9ADAALgAwADsAIABpAGYAKAAkAF8ALgBDAFAAVQApAHsAJABjAHYAPQBbAG0AYQB0AGgAXQA6ADoAUgBvAHUAbgBkACgAJABfAC4AQwBQAFUALAAxACkAfQA7ACAAJAB3AHMAPQBbAGwAbwBuAGcAXQAkAF8ALgBXAG8AcgBrAGkAbgBnAFMAZQB0ADYANAA7ACAAJABwAG0APQAwAC4AMAA7ACAAaQBmACgAJAB0AG0AIAAtAGcAdAAgADAAKQB7ACQAcABtAD0AWwBtAGEAdABoAF0AOgA6AFIAbwB1AG4AZAAoADEAMAAwAC4AMAAqACQAdwBzAC8AJAB0AG0ALAAxACkAfQA7ACAAZQBjAGgAbwAgACgAJABfAC4ASQBkAC4AVABvAFMAdAByAGkAbgBnACgAKQArACcAIAAnACsAJABjAHYAKwAnACAAJwArACQAcABtACsAJwAgACcAKwBbAGwAbwBuAGcAXQAoACQAdwBzAC8AMQAwADIANAApACsAJwAgACcAKwAkAF8ALgBQAHIAbwBjAGUAcwBzAE4AYQBtAGUAKQAgAH0ACgBlAGMAaABvACAAJwBAAFUAUABUAEkATQBFACcACgBlAGMAaABvACAAKABbAGkAbgB0ADYANABdACgAKABHAGUAdAAtAEQAYQB0AGUAKQAtACQAbwBzAC4ATABhAHMAdABCAG8AbwB0AFUAcABUAGkAbQBlACkALgBUAG8AdABhAGwAUwBlAGMAbwBuAGQAcwApAAoAZQBjAGgAbwAgACcAQABMAE8AQQBEACcACgBlAGMAaABvACAAJwAwACAAMAAgADAAJwAKAGUAYwBoAG8AIAAnAEAATwBTACcACgBlAGMAaABvACAAKAAnAFAAUgBFAFQAVABZAF8ATgBBAE0ARQA9ACcAKwAkAG8AcwAuAEMAYQBwAHQAaQBvAG4AKQAKAGUAYwBoAG8AIAAnAEAASwBFAFIATgBFAEwAJwAKAGUAYwBoAG8AIAAoACQAbwBzAC4AVgBlAHIAcwBpAG8AbgArACcAIABiAHUAaQBsAGQAIAAnACsAJABvAHMALgBCAHUAaQBsAGQATgB1AG0AYgBlAHIAKQAKAGUAYwBoAG8AIAAnAEAAQwBQAFUAJwAKAGUAYwBoAG8AIAAkAGUAbgB2ADoATgBVAE0AQgBFAFIAXwBPAEYAXwBQAFIATwBDAEUAUwBTAE8AUgBTAAoA"
 
         /** [WINDOWS_COMMAND] plus the services section (a cheap query on Windows). */
-        val FULL_WINDOWS_COMMAND: String =
+        const val FULL_WINDOWS_COMMAND: String =
             "powershell.exe -NoProfile -NonInteractive -EncodedCommand CgAkAEUAcgByAG8AcgBBAGMAdABpAG8AbgBQAHIAZQBmAGUAcgBlAG4AYwBlAD0AJwBTAGkAbABlAG4AdABsAHkAQwBvAG4AdABpAG4AdQBlACcACgAkAG8AcwA9AEcAZQB0AC0AQwBpAG0ASQBuAHMAdABhAG4AYwBlACAAVwBpAG4AMwAyAF8ATwBwAGUAcgBhAHQAaQBuAGcAUwB5AHMAdABlAG0ACgAkAGMAPQBHAGUAdAAtAEMAbwB1AG4AdABlAHIAIAAnAFwAUAByAG8AYwBlAHMAcwBvAHIAKABfAFQAbwB0AGEAbAApAFwAJQAgAFAAcgBvAGMAZQBzAHMAbwByACAAVABpAG0AZQAnAAoAUwB0AGEAcgB0AC0AUwBsAGUAZQBwACAALQBNAGkAbABsAGkAcwBlAGMAbwBuAGQAcwAgADQAMAAwAAoAJABjADIAPQBHAGUAdAAtAEMAbwB1AG4AdABlAHIAIAAnAFwAUAByAG8AYwBlAHMAcwBvAHIAKABfAFQAbwB0AGEAbAApAFwAJQAgAFAAcgBvAGMAZQBzAHMAbwByACAAVABpAG0AZQAnAAoAZQBjAGgAbwAgACgAJwBjAHAAdQAgACcAKwBbAG0AYQB0AGgAXQA6ADoAUgBvAHUAbgBkACgAKAAkAGMALgBDAG8AdQBuAHQAZQByAFMAYQBtAHAAbABlAHMAWwAwAF0ALgBDAG8AbwBrAGUAZABWAGEAbAB1AGUAKwAkAGMAMgAuAEMAbwB1AG4AdABlAHIAUwBhAG0AcABsAGUAcwBbADAAXQAuAEMAbwBvAGsAZQBkAFYAYQBsAHUAZQApAC8AMgAsADEAKQApAAoAZQBjAGgAbwAgACcAQABNAEUATQAnAAoAJAB0AG0APQBbAGwAbwBuAGcAXQAkAG8AcwAuAFQAbwB0AGEAbABWAGkAcwBpAGIAbABlAE0AZQBtAG8AcgB5AFMAaQB6AGUAKgAxADAAMgA0AAoAJABmAG0APQBbAGwAbwBuAGcAXQAkAG8AcwAuAEYAcgBlAGUAUABoAHkAcwBpAGMAYQBsAE0AZQBtAG8AcgB5ACoAMQAwADIANAAKAGUAYwBoAG8AIAAoACcATQBlAG0AOgAgACcAKwAkAHQAbQArACcAIAAnACsAKAAkAHQAbQAtACQAZgBtACkAKQAKAGUAYwBoAG8AIAAnAEAARABJAFMASwAnAAoARwBlAHQALQBDAGkAbQBJAG4AcwB0AGEAbgBjAGUAIABXAGkAbgAzADIAXwBMAG8AZwBpAGMAYQBsAEQAaQBzAGsAIAAtAEYAaQBsAHQAZQByACAAJwBEAHIAaQB2AGUAVAB5AHAAZQA9ADMAJwAgAHwAIABGAG8AcgBFAGEAYwBoAC0ATwBiAGoAZQBjAHQAIAB7ACAAJAB0AD0AWwBsAG8AbgBnAF0AJABfAC4AUwBpAHoAZQA7ACAAJABmAD0AWwBsAG8AbgBnAF0AJABfAC4ARgByAGUAZQBTAHAAYQBjAGUAOwAgAGkAZgAoACQAdAAgAC0AZwB0ACAAMAApAHsAIAAkAHUAPQAkAHQALQAkAGYAOwAgAGUAYwBoAG8AIAAoACQAXwAuAEQAZQB2AGkAYwBlAEkARAArACcAIAAnACsAWwBsAG8AbgBnAF0AKAAkAHQALwAxADAAMgA0ACkAKwAnACAAJwArAFsAbABvAG4AZwBdACgAJAB1AC8AMQAwADIANAApACsAJwAgACcAKwBbAGwAbwBuAGcAXQAoACQAZgAvADEAMAAyADQAKQArACcAIAAnACsAWwBpAG4AdABdACgAMQAwADAAKgAkAHUALwAkAHQAKQArACcAJQAgACcAKwAkAF8ALgBEAGUAdgBpAGMAZQBJAEQAKQAgAH0AIAB9AAoAZQBjAGgAbwAgACcAQABOAEUAVAAnAAoARwBlAHQALQBDAGkAbQBJAG4AcwB0AGEAbgBjAGUAIABXAGkAbgAzADIAXwBQAGUAcgBmAFIAYQB3AEQAYQB0AGEAXwBUAGMAcABpAHAAXwBOAGUAdAB3AG8AcgBrAEkAbgB0AGUAcgBmAGEAYwBlACAAfAAgAFcAaABlAHIAZQAtAE8AYgBqAGUAYwB0ACAAewAgACQAXwAuAE4AYQBtAGUAIAAtAG4AZQAgACcATABvAG8AcABiAGEAYwBrACcAIAB9ACAAfAAgAEYAbwByAEUAYQBjAGgALQBPAGIAagBlAGMAdAAgAHsAIABlAGMAaABvACAAKAAkAF8ALgBOAGEAbQBlACsAJwA6ACAAJwArACQAXwAuAEIAeQB0AGUAcwBSAGUAYwBlAGkAdgBlAGQAUABlAHIAcwBlAGMAKwAnACAAMAAgADAAIAAwACAAMAAgADAAIAAwACAAMAAgACcAKwAkAF8ALgBCAHkAdABlAHMAUwBlAG4AdABQAGUAcgBzAGUAYwArACcAIAAwACAAMAAgADAAIAAwACAAMAAgADAAIAAwACcAKQAgAH0ACgBlAGMAaABvACAAJwBAAFAAUgBPAEMAJwAKAEcAZQB0AC0AUAByAG8AYwBlAHMAcwAgAHwAIABTAG8AcgB0AC0ATwBiAGoAZQBjAHQAIABDAFAAVQAgAC0ARABlAHMAYwBlAG4AZABpAG4AZwAgAHwAIABTAGUAbABlAGMAdAAtAE8AYgBqAGUAYwB0ACAALQBGAGkAcgBzAHQAIAA4ACAAfAAgAEYAbwByAEUAYQBjAGgALQBPAGIAagBlAGMAdAAgAHsAIAAkAGMAdgA9ADAALgAwADsAIABpAGYAKAAkAF8ALgBDAFAAVQApAHsAJABjAHYAPQBbAG0AYQB0AGgAXQA6ADoAUgBvAHUAbgBkACgAJABfAC4AQwBQAFUALAAxACkAfQA7ACAAJAB3AHMAPQBbAGwAbwBuAGcAXQAkAF8ALgBXAG8AcgBrAGkAbgBnAFMAZQB0ADYANAA7ACAAJABwAG0APQAwAC4AMAA7ACAAaQBmACgAJAB0AG0AIAAtAGcAdAAgADAAKQB7ACQAcABtAD0AWwBtAGEAdABoAF0AOgA6AFIAbwB1AG4AZAAoADEAMAAwAC4AMAAqACQAdwBzAC8AJAB0AG0ALAAxACkAfQA7ACAAZQBjAGgAbwAgACgAJABfAC4ASQBkAC4AVABvAFMAdAByAGkAbgBnACgAKQArACcAIAAnACsAJABjAHYAKwAnACAAJwArACQAcABtACsAJwAgACcAKwBbAGwAbwBuAGcAXQAoACQAdwBzAC8AMQAwADIANAApACsAJwAgACcAKwAkAF8ALgBQAHIAbwBjAGUAcwBzAE4AYQBtAGUAKQAgAH0ACgBlAGMAaABvACAAJwBAAFUAUABUAEkATQBFACcACgBlAGMAaABvACAAKABbAGkAbgB0ADYANABdACgAKABHAGUAdAAtAEQAYQB0AGUAKQAtACQAbwBzAC4ATABhAHMAdABCAG8AbwB0AFUAcABUAGkAbQBlACkALgBUAG8AdABhAGwAUwBlAGMAbwBuAGQAcwApAAoAZQBjAGgAbwAgACcAQABMAE8AQQBEACcACgBlAGMAaABvACAAJwAwACAAMAAgADAAJwAKAGUAYwBoAG8AIAAnAEAATwBTACcACgBlAGMAaABvACAAKAAnAFAAUgBFAFQAVABZAF8ATgBBAE0ARQA9ACcAKwAkAG8AcwAuAEMAYQBwAHQAaQBvAG4AKQAKAGUAYwBoAG8AIAAnAEAASwBFAFIATgBFAEwAJwAKAGUAYwBoAG8AIAAoACQAbwBzAC4AVgBlAHIAcwBpAG8AbgArACcAIABiAHUAaQBsAGQAIAAnACsAJABvAHMALgBCAHUAaQBsAGQATgB1AG0AYgBlAHIAKQAKAGUAYwBoAG8AIAAnAEAAQwBQAFUAJwAKAGUAYwBoAG8AIAAkAGUAbgB2ADoATgBVAE0AQgBFAFIAXwBPAEYAXwBQAFIATwBDAEUAUwBTAE8AUgBTAAoACgBlAGMAaABvACAAJwBAAFMARQBSAFYASQBDAEUAUwAnAAoARwBlAHQALQBTAGUAcgB2AGkAYwBlACAAfAAgAFcAaABlAHIAZQAtAE8AYgBqAGUAYwB0ACAAewAgACQAXwAuAFMAdABhAHQAdQBzACAALQBuAGUAIAAnAFMAdABvAHAAcABlAGQAJwAgAH0AIAB8ACAAUwBlAGwAZQBjAHQALQBPAGIAagBlAGMAdAAgAC0ARgBpAHIAcwB0ACAAOAAgAHwAIABGAG8AcgBFAGEAYwBoAC0ATwBiAGoAZQBjAHQAIAB7ACAAJABzAD0AJwBhAGMAdABpAHYAZQAnADsAIABpAGYAKAAkAF8ALgBTAHQAYQB0AHUAcwAgAC0AbgBlACAAJwBSAHUAbgBuAGkAbgBnACcAKQB7ACQAcwA9ACcAbwB0AGgAZQByACcAfQA7ACAAZQBjAGgAbwAgACgAJABfAC4ATgBhAG0AZQArACcAIAAtACAAJwArACQAcwArACcAIAAnACsAJABzACkAIAB9AAoA"
     }
 }
