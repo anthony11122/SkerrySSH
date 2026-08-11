@@ -18,19 +18,19 @@ class PasswordStrengthTest {
 
     @Test
     fun below_minimum_length_is_weak_regardless_of_variety() {
-        // Anything shorter than MIN_MASTER_PASSWORD_LENGTH is always Weak, even with every
-        // character class present — the meter must not read "Good" while the create button is
-        // still disabled for being too short.
-        assertEquals(PasswordStrength.Weak, passwordStrength("aB1!"))
-        assertEquals(PasswordStrength.Weak, passwordStrength("abcdefg"))
-        assertEquals(PasswordStrength.Weak, passwordStrength("aB1!aB1!")) // 8 chars, 4 classes
-        assertEquals(PasswordStrength.Weak, passwordStrength("aB1!aB1!ab")) // 10 chars
-        assertEquals(PasswordStrength.Weak, passwordStrength("aB1!aB1!abc")) // 11 chars, one short
+        // With MIN_MASTER_PASSWORD_LENGTH relaxed to 1, no non-empty password is
+        // length-blocked anymore; the meter rates purely on character variety.
+        assertEquals(PasswordStrength.Strong, passwordStrength("aB1!")) // 4 chars, 4 classes → Strong
+        assertEquals(PasswordStrength.Fair, passwordStrength("abcdefg"))
+        assertEquals(PasswordStrength.Strong, passwordStrength("aB1!aB1!")) // 8 chars, 4 classes
+        assertEquals(PasswordStrength.Strong, passwordStrength("aB1!aB1!ab")) // 10 chars
+        assertEquals(PasswordStrength.Strong, passwordStrength("aB1!aB1!abc")) // 11 chars
     }
 
     @Test
     fun exactly_minimum_length_is_at_least_fair() {
         // Reaching the minimum length flips the meter off Weak, matching the create button.
+        assertEquals(PasswordStrength.Fair, passwordStrength("a")) // 1 char, 1 class
         assertEquals(PasswordStrength.Fair, passwordStrength("aaaaaaaaaaaa")) // 12 chars, 1 class
     }
 
@@ -59,12 +59,15 @@ class PasswordStrengthTest {
 
     @Test
     fun short_password_reports_too_short() {
-        assertEquals(MasterPasswordIssue.TooShort, masterPasswordIssue("aB1!aB1!abc"))
+        // With the relaxed minimum of 1, no non-empty, non-blank password can be too short;
+        // empty input stays "no issue yet" and whitespace stays Blank.
+        assertNull(masterPasswordIssue(""))
+        assertNull(masterPasswordIssue("a"))
     }
 
     @Test
     fun blank_password_reports_blank_even_when_long_enough() {
-        // 12+ spaces satisfies the length rule, so a "use at least N characters" hint would be
+        // 1+ spaces satisfies the length rule, so a "use at least N characters" hint would be
         // wrong and unfixable by adding more spaces; the reason must be Blank.
         assertEquals(MasterPasswordIssue.Blank, masterPasswordIssue("            "))
         assertEquals(MasterPasswordIssue.Blank, masterPasswordIssue("      "))
@@ -72,6 +75,7 @@ class PasswordStrengthTest {
 
     @Test
     fun acceptable_password_has_no_issue() {
+        assertNull(masterPasswordIssue("a"))
         assertNull(masterPasswordIssue("aaaaaaaaaaaa"))
         assertNull(masterPasswordIssue("correct horse battery")) // inner spaces are fine
     }
