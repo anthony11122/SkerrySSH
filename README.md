@@ -4,8 +4,8 @@
 
 **简体中文**
 
-[![CI](https://github.com/SeCherkasov/SkerrySSH/actions/workflows/ci.yml/badge.svg)](https://github.com/SeCherkasov/SkerrySSH/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/SeCherkasov/SkerrySSH)](../../releases/latest)
+[![CI](https://github.com/anthony11122/SkerrySSH/actions/workflows/ci.yml/badge.svg)](https://github.com/anthony11122/SkerrySSH/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/anthony11122/SkerrySSH)](../../releases/latest)
 [![Clients: GPL-3.0](https://img.shields.io/badge/clients-GPL--3.0-blue)](LICENSE)
 [![Server: AGPL-3.0](https://img.shields.io/badge/server-AGPL--3.0-blue)](server/LICENSE)
 
@@ -104,7 +104,7 @@
 - **容器** —— 直接从主机进入 Docker 容器或 Kubernetes Pod 执行命令。
 - **远程桌面** —— 为本项目自研的 VNC 和 RDP 客户端栈：截图、Ctrl+Alt+Del、剪贴板互通、会话中实时修改设置。RDP 支持 H.264（有解码器时）：Android 始终可用，桌面端需要 PATH 中的 `ffmpeg`。
 - **终端** —— 自研网格仿真，每个标签页最多四个平铺窗格并支持同步输入、回滚搜索、语法高亮、基于历史的命令面板、向多个会话广播输入、从输出中提取文件路径在 SFTP 中打开、会话录制（asciinema v2）并支持应用内回放。
-- **主机监控** —— 独立页面：CPU、内存和网络（含历史曲线）、磁盘和交换分区（等级条）、进程排行、systemd 单元、挂载点、容器、设备端阈值告警。
+- **主机监控** —— 独立页面：CPU、内存和网络（含历史曲线）、磁盘和交换分区（等级条）、进程排行、systemd 单元、挂载点、容器、设备端阈值告警。支持 Linux 与 Windows 主机（Windows 通过 PowerShell 采集，自动识别平台）。
 - **会话共享** —— 通过端到端加密通道把终端流共享给队友，可只读或移交键盘控制。
 - **生产环境防护** —— 对标记为 `prod` 的主机上的每条命令做风险评分，危险命令需要确认。
 - **Runbook（运行手册）** —— 在真实会话中分步执行流程：每步可以是命令或 SFTP 传输、等待确认的暂停点、非零退出码即停止。运行日志记录每步的状态、耗时和输出。
