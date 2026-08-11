@@ -1257,27 +1257,27 @@ fun TerminalScreen(
                       // Follow the composition so the IME stays in sync; nothing is sent and
                       // the anchor reset is deferred until the candidate is committed.
                       imeValue = nv
-                      return@onValueChange
-                  }
-                  val raw = imeDeltaToPty(ANCHOR, nv.text)
-                  // sticky-ctrl etc. apply only to real input (not to an empty delta).
-                  val out = if (raw.isEmpty()) raw else imeTransform?.invoke(raw) ?: raw
-                  if (out.isNotEmpty()) {
-                      state.clearSelection()
-                      textToolbar.hide()
-                      // While reverse-search is open — the soft keyboard edits the query, not the PTY:
-                      // DEL → backspace, Enter(CR) → accept, printable chars → into the query.
-                      if (state.reverseSearch.query != null) {
-                          for (ch in out) when (ch.code) {
-                              127, 8 -> state.reverseSearch.backspace() // DEL / BS
-                              13, 10 -> state.reverseSearch.accept() // CR / LF — accept
-                              else -> if (ch.code >= 0x20) state.reverseSearch.append(ch.toString())
+                  } else {
+                      val raw = imeDeltaToPty(ANCHOR, nv.text)
+                      // sticky-ctrl etc. apply only to real input (not to an empty delta).
+                      val out = if (raw.isEmpty()) raw else imeTransform?.invoke(raw) ?: raw
+                      if (out.isNotEmpty()) {
+                          state.clearSelection()
+                          textToolbar.hide()
+                          // While reverse-search is open — the soft keyboard edits the query, not the PTY:
+                          // DEL → backspace, Enter(CR) → accept, printable chars → into the query.
+                          if (state.reverseSearch.query != null) {
+                              for (ch in out) when (ch.code) {
+                                  127, 8 -> state.reverseSearch.backspace() // DEL / BS
+                                  13, 10 -> state.reverseSearch.accept() // CR / LF — accept
+                                  else -> if (ch.code >= 0x20) state.reverseSearch.append(ch.toString())
+                              }
+                          } else {
+                              state.typeInput(out) // feeds autocomplete (soft keyboard), then goes to the PTY
                           }
-                      } else {
-                          state.typeInput(out) // feeds autocomplete (soft keyboard), then goes to the PTY
                       }
+                      imeValue = imeBaseline
                   }
-                  imeValue = imeBaseline
               },
               modifier = Modifier.size(1.dp)
                   .focusRequester(imeFocusRequester)
