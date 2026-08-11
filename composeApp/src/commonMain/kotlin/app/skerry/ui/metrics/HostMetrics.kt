@@ -354,6 +354,15 @@ private fun cpuTotalsFromStatLine(line: String): Pair<Long, Long>? {
 }
 
 private fun cpuPercentFromStat(cpuLines: List<String>): Int {
+    // Windows format: a single `cpu <percent>` line, already sampled by the PowerShell probe
+    // (two %-Processor-Time samples averaged on the host). A /proc/stat line has 5+ numbers, so
+    // a one-number line can only be this format.
+    if (cpuLines.size == 1) {
+        val t = cpuLines[0].split(WHITESPACE).drop(1)
+        if (t.size == 1) {
+            return t[0].toFloatOrNull()?.roundToInt()?.coerceIn(0, 100) ?: 0
+        }
+    }
     if (cpuLines.size >= 2) {
         val a = cpuTotalsFromStatLine(cpuLines[0]) ?: return 0
         val b = cpuTotalsFromStatLine(cpuLines[1]) ?: return 0

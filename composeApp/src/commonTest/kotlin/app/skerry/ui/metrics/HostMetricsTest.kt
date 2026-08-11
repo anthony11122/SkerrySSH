@@ -359,4 +359,63 @@ class HostMetricsTest {
         assertEquals(0f, m.diskFraction)
         assertTrue(m.cpuFraction in 0f..1f && m.memFraction in 0f..1f && m.diskFraction in 0f..1f)
     }
+
+    // --- Windows (PowerShell probe) output -------------------------------------------
+
+    private val windowsOutput = """
+        cpu 23.5
+        @MEM
+        Mem: 8589934592 4294967296
+        @DISK
+        C: 51200000 30000000 21200000 59% C:
+        @NET
+        Ethernet0: 1234567890 987654321
+        @PROC
+        1234 45.6 12.3 1048576 chrome
+        5678 12.3 4.5 524288 explorer
+        @UPTIME
+        86400
+        @LOAD
+        0 0 0
+        @OS
+        PRETTY_NAME=Microsoft Windows 11 专业版
+        @KERNEL
+        10.0.22631 build 22631
+        @CPU
+        8
+        @SERVICES
+        Spooler - active active
+        wuauserv - active active
+    """.trimIndent()
+
+    @Test
+    fun parses_windows_probe_output() {
+        val m = parseHostMetrics(windowsOutput)!!
+        // Single `cpu <percent>` line: used directly, no /proc/stat delta.
+        assertEquals(24, m.cpuPercent) // 23.5 rounds to 24
+        assertEquals(8_589_934_592L, m.memTotalBytes)
+        assertEquals(4_294_967_296L, m.memUsedBytes)
+        assertEquals(59, m.diskPercent)
+        assertEquals("C:", m.disks.single().mount)
+        assertEquals(1_234_567_890L, m.netRxBytes)
+        assertEquals(987_654_321L, m.netTxBytes)
+        assertEquals("Ethernet0", m.netInterface)
+        val top = m.processes.first()
+        assertEquals(1234, top.pid)
+        assertEquals(45.6f, top.cpuPercent)
+        assertEquals(12.3f, top.memPercent)
+        assertEquals(1_048_576L * 1024, top.rssBytes) // KiB → bytes, same as ps
+        assertEquals("chrome", top.command)
+        assertEquals(86_400L, m.uptimeSeconds)
+        assertEquals("Microsoft Windows 11 专业版", m.osName)
+        assertEquals("10.0.22631 build 22631", m.kernel)
+        assertEquals(8, m.cpuCount)
+        assertEquals(ServiceState.Active, m.services.first().state)
+    }
+
+    @Test
+    fun windows_cpu_percent_clamps_into_range() {
+        val out = windowsOutput.replaceFirst("cpu 23.5", "cpu 187.0")
+        assertEquals(100, parseHostMetrics(out)!!.cpuPercent)
+    }
 }

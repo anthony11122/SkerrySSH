@@ -8,7 +8,9 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HostMetricsControllerTest {
@@ -65,6 +67,87 @@ class HostMetricsControllerTest {
         controller.start() // a repeated start must not spawn a second polling loop
 
         assertEquals(afterFirst, calls)
+        controller.stop()
+        scope.cancel()
+    }
+
+    // --- Platform detection (Linux output that never parses → Windows probe) ----------
+
+    private val windowsSample = """
+        cpu 23.5
+        @MEM
+        Mem: 8589934592 4294967296
+        @DISK
+        C: 51200000 30000000 21200000 59% C:
+    """.trimIndent()
+
+    private val linuxCommands = mutableListOf<String>()
+    private val winCommands = mutableListOf<String>()
+
+    @Test
+    fun windows_host_is_detected_and_locked_after_first_round_trip() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val controller = HostMetricsController(
+            exec = { cmd ->
+                if (cmd.contains("powershell.exe")) {
+                    winCommands += "win"
+                    ExecResult(0, windowsSample, "")
+                } else {
+                    linuxCommands += "linux"
+                    // A Windows OpenSSH shell rejects the /proc chain: stdout empty, exit 1.
+                    ExecResult(1, "", "grep: /proc/stat: No such file or directory")
+                }
+            },
+            scope = scope,
+        )
+
+        controller.start()
+
+        val m = controller.metrics
+        assertNotNull(m)
+        assertEquals(59, m.diskPercent)
+        assertEquals(4_294_967_296L, m.memUsedBytes)
+        // First the Linux chain was tried and failed, then the Windows probe answered; every
+        // later poll goes straight to the Windows command (platform locked, no re-probing).
+        assertEquals("linux", linuxCommands.first())
+        assertTrue(winCommands.size >= 2, "probe + subsequent polls must use the Windows command")
+
+        controller.stop()
+        scope.cancel()
+    }
+
+    @Test
+    fun linux_host_never_touches_the_windows_probe() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val controller = HostMetricsController(
+            exec = { cmd ->
+                if (cmd.contains("powershell.exe")) winCommands += "win"
+                ExecResult(0, sample, "")
+            },
+            scope = scope,
+        )
+
+        controller.start()
+
+        assertNotNull(controller.metrics)
+        assertTrue(winCommands.isEmpty(), "a Linux host must never run the PowerShell probe")
+
+        controller.stop()
+        scope.cancel()
+    }
+
+    @Test
+    fun host_that_never_parses_ends_unsupported() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val controller = HostMetricsController(
+            exec = { ExecResult(0, "some router banner", "") },
+            scope = scope,
+        )
+
+        controller.start()
+
+        assertEquals(MetricsAvailability.Unsupported, controller.availability)
+        assertNull(controller.metrics)
         controller.stop()
         scope.cancel()
     }

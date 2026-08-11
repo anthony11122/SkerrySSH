@@ -81,13 +81,28 @@ class HostMetricsController(
     private var execFailures = 0
     private var polls = 0
 
+    /**
+     * Host OS family, locked in on the first answer that parses. `null` while unknown: the Linux
+     * command is tried first, and one parse failure falls back to the Windows PowerShell probe
+     * (a Windows OpenSSH shell can't run the /proc chain, so its stdout won't parse). Once locked,
+     * every poll uses the matching command — no repeated probing.
+     */
+    private var platform: MetricsPlatform? = null
+
     /** Starts periodic polling (idempotent: a repeat call does not start a second loop). */
     fun start() {
         if (job != null) return
         job = scope.launch {
             while (isActive) {
                 val full = polls++ % FULL_POLL_EVERY == 0
-                val result = runCatching { exec(if (full) FULL_METRICS_COMMAND else METRICS_COMMAND) }
+                val windows = platform == MetricsPlatform.Windows
+                val cmd = when {
+                    windows && full -> FULL_WINDOWS_COMMAND
+                    windows -> WINDOWS_COMMAND
+                    full -> FULL_METRICS_COMMAND
+                    else -> METRICS_COMMAND
+                }
+                val result = runCatching { exec(cmd) }
                     .onFailure {
                         if (it is CancellationException) throw it
                         // A transport with no exec channel at all (telnet/serial/Mosh) can never
@@ -110,16 +125,33 @@ class HostMetricsController(
                 } else {
                     execFailures = 0
                     val parsed = parseHostMetrics(result.stdout)
-                    if (parsed == null) {
-                        // The host answers but the output isn't Linux /proc — retrying won't change
-                        // that, so give up after a few attempts (the first may be truncated output).
-                        if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
+                    if (parsed != null) {
+                        // First parseable answer locks the platform family for this session.
+                        platform = platform ?: MetricsPlatform.Linux
+                        unparsablePolls = 0
+                        publish(parsed, full)
+                    } else if (platform == null) {
+                        // The Linux /proc output doesn't parse — this may be a Windows host whose
+                        // shell rejected the whole chain. Try the PowerShell probe once; success
+                        // locks Windows, failure keeps the unknown platform and the unparsable
+                        // counter below settles the verdict (restricted shell, other OS, ...).
+                        val winResult = runCatching { exec(WINDOWS_COMMAND) }.getOrNull()
+                        val winParsed = winResult?.stdout?.let { parseHostMetrics(it) }
+                        if (winParsed != null) {
+                            platform = MetricsPlatform.Windows
+                            unparsablePolls = 0
+                            publish(winParsed, full)
+                        } else if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
+                            // The host answers but the output is neither Linux /proc nor the
+                            // Windows probe — retrying won't change that.
                             availability = MetricsAvailability.Unsupported
                             return@launch
                         }
-                    } else {
-                        unparsablePolls = 0
-                        publish(parsed, full)
+                    } else if (++unparsablePolls >= UNPARSABLE_POLLS_BEFORE_VERDICT) {
+                        // Windows locked, but the probe output stopped parsing — a verdict rather
+                        // than an endless "…" over pointless round-trips.
+                        availability = MetricsAvailability.Unsupported
+                        return@launch
                     }
                 }
                 // Leaves early when the screen asks for a poll now ([refreshNow]); otherwise this is
@@ -260,5 +292,27 @@ class HostMetricsController(
 
         /** [METRICS_COMMAND] plus [UNITS_TAIL] — what every [FULL_POLL_EVERY]-th poll sends. */
         val FULL_METRICS_COMMAND: String = "$METRICS_COMMAND; $UNITS_TAIL"
+
+        /**
+         * Windows host metrics, collected by a single PowerShell script passed via
+         * `-EncodedCommand` (UTF-16LE base64) so no cmd.exe quoting can mangle it. The script
+         * prints the same @MARKER sections as [METRICS_COMMAND]: CPU is sampled twice on the host
+         * and averaged into one `cpu <percent>` line; memory/disk in KiB-shaped rows; the network
+         * counters are cumulative interface bytes (raw perf counters), matching the Linux
+         * /proc/net/dev semantics; processes carry cumulative CPU seconds as the `pcpu` column
+         * (Windows has no instantaneous %-CPU per process without a second sample). Load average
+         * has no Windows equivalent and prints a placeholder. The script body lives at
+         * tools/win-metrics/collect.ps1 (source) — the base64 below is generated with:
+         * `python3 -c "import base64;print(base64.b64encode(open('collect.ps1','rb').read().decode('utf-8').encode('utf-16-le')).decode())"`
+         */
+        const val WINDOWS_COMMAND: String =
+            "powershell.exe -NoProfile -NonInteractive -EncodedCommand $cheap"
+
+        /** [WINDOWS_COMMAND] plus the services section (a cheap query on Windows). */
+        val FULL_WINDOWS_COMMAND: String =
+            "powershell.exe -NoProfile -NonInteractive -EncodedCommand $full"
     }
 }
+
+/** Host OS family the metrics poller talks to; locked in by the first parseable answer. */
+enum class MetricsPlatform { Linux, Windows }
