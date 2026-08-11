@@ -193,11 +193,10 @@ class SessionAssistantController(
     /** Start an agent task from [prompt]. No-op while busy/agent-running or with AI off. */
     fun startAgent(prompt: String) {
         val text = prompt.trim()
+        if (busy || text.isEmpty() || !decision.aiEnabled) return
         val active = agentLoop?.state
         // An ASK pause is re-entered with the user's answer; everything else active blocks a new task.
-        if (busy || text.isEmpty() || !decision.aiEnabled ||
-            (active != null && active != AgentLoopState.Idle && active != AgentLoopState.Asking)
-        ) return
+        if (active != null && active != AgentLoopState.Idle && active != AgentLoopState.Asking) return
         val current = settings()
         val device = LocalModelCatalog.resolve(current.localModelId)
         val route = AiRouter.route(decision, current, device, localInstalled(device))
@@ -206,9 +205,10 @@ class SessionAssistantController(
             return
         }
         // Re-entering from an ASK keeps the same loop (history preserved); a fresh task creates one.
-        if (agentLoop == null || agentLoop!!.state == AgentLoopState.Done ||
-            agentLoop!!.state == AgentLoopState.Failed || agentLoop!!.state == AgentLoopState.Interrupted
-        ) {
+        val currentLoop = agentLoop
+        val finished = currentLoop != null && (currentLoop.state == AgentLoopState.Done ||
+            currentLoop.state == AgentLoopState.Failed || currentLoop.state == AgentLoopState.Interrupted)
+        if (currentLoop == null || finished) {
             agentLoop = AgentLoopController(
                 maxSteps = current.agentMaxSteps,
                 maxMinutes = current.agentMaxMinutes,

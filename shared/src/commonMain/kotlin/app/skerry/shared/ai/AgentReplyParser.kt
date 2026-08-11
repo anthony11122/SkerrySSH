@@ -38,7 +38,11 @@ fun parseAgentDirective(raw: String): AgentDirective {
         val question = cleanLine(actionAsk)
         if (!question.isNullOrBlank()) return AgentDirective.Ask(question)
     }
-    // Fallback: first safe line as a command (bar compatibility).
+    return parseFallback(raw)
+}
+
+/** No `ACTION:`/bare marker matched: first safe line as a command, else ask/unparsable. */
+private fun parseFallback(raw: String): AgentDirective {
     val first = sanitizeCommand(raw)
     return when {
         first == null -> AgentDirective.Unparsable
@@ -51,15 +55,13 @@ fun parseAgentDirective(raw: String): AgentDirective {
 
 /** Value after `ACTION: <kind> ` on any line, or `null`. */
 private fun actionValue(raw: String, kind: String): String? {
-    raw.lineSequence().forEach { line ->
+    for (line in raw.lineSequence()) {
         val t = line.trim()
-        if (t.startsWith("ACTION:", ignoreCase = true)) {
-            val rest = t.substring("ACTION:".length).trim()
-            if (rest.startsWith(kind, ignoreCase = true)) {
-                val value = rest.substring(kind.length).trim()
-                if (value.isNotEmpty()) return value
-            }
-        }
+        if (!t.startsWith("ACTION:", ignoreCase = true)) continue
+        val rest = t.substring("ACTION:".length).trim()
+        if (!rest.startsWith(kind, ignoreCase = true)) continue
+        val value = rest.substring(kind.length).trim()
+        if (value.isNotEmpty()) return value
     }
     return null
 }
@@ -92,9 +94,10 @@ fun sanitizeCommand(raw: String): String? {
     if (text.startsWith("```") && text.endsWith("```") && text.length > 6) {
         text = text.substring(3, text.length - 3)
         val firstTok = text.substringBefore('\n').trim()
-        if (firstTok.isNotEmpty() && firstTok.none { it.isWhitespace() } &&
+        // A ```bash / ```sh language tag on the fence's first line, dropped.
+        val isLangTag = firstTok.isNotEmpty() && firstTok.none { it.isWhitespace() } &&
             firstTok.all { it.isLetterOrDigit() || it == '-' }
-        ) {
+        if (isLangTag) {
             text = text.substringAfter('\n', "")
         }
     }
