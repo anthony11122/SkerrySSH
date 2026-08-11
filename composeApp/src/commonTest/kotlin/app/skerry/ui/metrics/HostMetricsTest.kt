@@ -369,7 +369,7 @@ class HostMetricsTest {
         @DISK
         C: 51200000 30000000 21200000 59% C:
         @NET
-        Ethernet0: 1234567890 987654321
+        Ethernet0: 1234567890 0 0 0 0 0 0 0 987654321 0 0 0 0 0 0 0
         @PROC
         1234 45.6 12.3 1048576 chrome
         5678 12.3 4.5 524288 explorer
