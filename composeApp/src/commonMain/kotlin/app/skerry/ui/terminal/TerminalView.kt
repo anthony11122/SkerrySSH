@@ -304,6 +304,7 @@ internal fun LivePaneBody(
                 st.terminal,
                 Modifier.fillMaxSize(),
                 focused = focused,
+                desktopImeField = true,
                 cursorOverlay = rememberTypingHint(pane.id),
                 onOpenPath = openPath,
             )
@@ -313,7 +314,7 @@ internal fun LivePaneBody(
             // No path affordance here: the SFTP channel died with the session, so a click would only
             // open a panel that can't list anything.
             is ConnectionUiState.Disconnected -> Box(Modifier.fillMaxSize()) {
-                TerminalScreen(st.terminal, Modifier.fillMaxSize(), focused = focused)
+                TerminalScreen(st.terminal, Modifier.fillMaxSize(), focused = focused, desktopImeField = true)
                 DisconnectedBanner(st, Modifier.align(Alignment.TopCenter))
             }
         }

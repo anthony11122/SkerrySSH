@@ -131,6 +131,11 @@ fun TerminalScreen(
     state: TerminalScreenState,
     modifier: Modifier = Modifier,
     imeInput: Boolean = false,
+    // Desktop IME support (CJK input methods): renders the hidden text field that the touch
+    // path uses and routes focus to it, so the system IME (pinyin etc.) has a composition
+    // target. Physical keys still flow through onPreviewKeyEvent (they are consumed there,
+    // never reaching the field); only IME-committed text arrives via the field.
+    desktopImeField: Boolean = false,
     imeTransform: ((String) -> String)? = null,
     fixedGrid: PtySize? = null,
     // Whether this is the pane the user is typing into. On a split every pane draws its own
@@ -209,6 +214,10 @@ fun TerminalScreen(
     val imeFocusRequester = remember { FocusRequester() }
     val imeBaseline = remember { TextFieldValue(ANCHOR, selection = TextRange(ANCHOR.length)) }
     var imeValue by remember { mutableStateOf(imeBaseline) }
+    // True while a desktop IME (pinyin, etc.) has an active composition in the hidden field.
+    // During composition the physical keys belong to the input method, so onPreviewKeyEvent
+    // consumes them instead of sending them to the PTY (otherwise pinyin letters leak out).
+    var imeComposing by remember { mutableStateOf(false) }
     // System clipboard via the suspend API ([androidx.compose.ui.platform.Clipboard]); reads/writes
     // go through clipboardScope (called fire-and-forget from non-suspend key/mouse handlers).
     val clipboard = LocalClipboard.current
@@ -264,7 +273,13 @@ fun TerminalScreen(
     val modalsOpen = ModalPresence.openCount
     val searchOpen = state.search.query != null
     LaunchedEffect(state, modalsOpen, searchOpen, focused) {
-        if (focused && !closed && !imeInput && modalsOpen == 0 && !searchOpen) focusRequester.requestFocus()
+        if (focused && !closed && !imeInput && modalsOpen == 0 && !searchOpen) {
+            // Desktop: the hidden IME field takes focus (it is inside this Box, so the Box's
+            // own focus state and onFocusChanged still see the terminal as focused). With the
+            // field focused, the system IME has a composition target for CJK input; physical
+            // keys are consumed by onPreviewKeyEvent and never reach the field.
+            imeFocusRequester.requestFocus()
+        }
     }
 
     // Autoscroll to bottom on new output — but only when the user was already at the bottom
@@ -744,6 +759,15 @@ fun TerminalScreen(
                 // Runs before the KeyDown guard so a Ctrl KeyUp also clears it. Never consumes the event.
                 hoverPos?.let { updateHoverAffordance(it, event.isCtrlPressed) }
                 if (event.type != KeyEventType.KeyDown || closed) return@onPreviewKeyEvent false
+                // Desktop IME composition (pinyin, Japanese, etc.): while the input method is
+                // composing, physical keys belong to it (letters build the syllable, arrows/Enter
+                // pick the candidate) — consume them so nothing leaks into the PTY. Ctrl/Alt
+                // chords are exempt (IME doesn't own those, and Ctrl+C must stay SIGINT); Esc is
+                // exempt too so the IME receives it and ends the composition (the shell ignores
+                // the bare ESC the key path then sends).
+                if (desktopImeField && imeComposing && !event.isCtrlPressed && !event.isAltPressed && event.key != Key.Escape) {
+                    return@onPreviewKeyEvent true
+                }
                 if (isImeOwnedPrintable(imeInput, event.isCtrlPressed, event.isAltPressed, event.utf16CodePoint) &&
                     isSoftKeyboardEvent(event)
                 ) {
@@ -981,6 +1005,8 @@ fun TerminalScreen(
                     textToolbar.hide()
                     if (down.type == PointerType.Mouse) {
                         focusRequester.requestFocus()
+                        // Desktop IME field keeps the system input method attached after a click.
+                        if (desktopImeField) imeFocusRequester.requestFocus()
                         val mods = currentEvent.keyboardModifiers
                         val shift = mods.isShiftPressed
                         // Left button with mouse tracking held: translate press/drag/release into reports
@@ -1200,14 +1226,19 @@ fun TerminalScreen(
           }
       }
 
-      // Touch input: an invisible field captures soft-keyboard characters. Diff against the anchor
-      // ([imeDeltaToPty]) and reset immediately — the field is just a "funnel" into the PTY, holds no text.
-      // Stood down while the search panel is open: two fields fighting over the soft keyboard would
+      // Input funnel: an invisible field captures IME text (soft keyboard on touch, the system
+      // input method on desktop) and forwards it to the PTY. Diff against the anchor
+      // ([imeDeltaToPty]) and reset immediately — the field is just a "funnel", holds no text.
+      // Stood down while the search panel is open: two fields fighting over the IME would
       // send the query into the PTY.
-      if (imeInput && !closed && !searchOpen) {
+      if ((imeInput || desktopImeField) && !closed && !searchOpen) {
           BasicTextField(
               value = imeValue,
               onValueChange = { nv ->
+                  // Desktop IME: a non-null composition range means the input method is still
+                  // composing (pinyin syllables); physical keys are consumed in onPreviewKeyEvent
+                  // while it lasts, so only committed text arrives here.
+                  imeComposing = nv.composition != null
                   val raw = imeDeltaToPty(ANCHOR, nv.text)
                   // sticky-ctrl etc. apply only to real input (not to an empty delta).
                   val out = if (raw.isEmpty()) raw else imeTransform?.invoke(raw) ?: raw
@@ -1234,7 +1265,9 @@ fun TerminalScreen(
               keyboardOptions = KeyboardOptions(
                   capitalization = KeyboardCapitalization.None,
                   autoCorrectEnabled = false,
-                  keyboardType = KeyboardType.Ascii,
+                  // Touch keeps Ascii (no suggestions above the soft keyboard); desktop uses Text
+                  // so CJK input methods accept the field as a composition target.
+                  keyboardType = if (imeInput) KeyboardType.Ascii else KeyboardType.Text,
                   imeAction = ImeAction.None,
               ),
           )
