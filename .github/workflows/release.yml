@@ -191,7 +191,7 @@ jobs:
           Get-ChildItem $outDir -Filter *.msi | Remove-Item -Force
           $wix = Get-ChildItem "C:\Program Files (x86)" -Directory -Filter "WiX Toolset*" -ErrorAction SilentlyContinue | Select-Object -First 1
           $wixArgs = @()
-          if ($wix) { $wixArgs = @("--wix-toolset-dir", $wix.FullName) }
+          if ($wix) { $wixArgs = @("--win-wix-toolset-dir", $wix.FullName) }
           jpackage --type msi --app-image $appImage.FullName --name Skerry --app-version $env:VERSION_NAME --win-menu --win-shortcut --win-per-user-install --resource-dir composeApp/windows --dest $outDir @wixArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
