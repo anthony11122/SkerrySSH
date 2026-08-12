@@ -175,6 +175,38 @@ jobs:
           ./gradlew :composeApp:packageMsi :composeApp:packagePortableZip --stacktrace
           ${VERSION_NAME:+"-Pskerry.versionName=$VERSION_NAME"}
 
+      - name: Re-package MSI with Simplified Chinese UI
+        # jpackage's own WiX flow can't take an overrides.wxs (the compose plugin clears its
+        # --resource-dir before invoking jpackage), so re-run jpackage against the same app
+        # image with --resource-dir pointing at composeApp/windows/, which carries the
+        # Simplified Chinese UI strings. Same output name, so the suffix step below still applies.
+        shell: pwsh
+        env:
+          VERSION_NAME: ${{ needs.version.outputs.name }}
+        run: |
+          $appImage = Get-ChildItem "composeApp/build/compose/binaries/main/app" -Directory | Select-Object -First 1
+          if (-not $appImage) { Write-Error "app image not found"; exit 1 }
+          $outDir = "composeApp/build/compose/binaries/main/msi"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          Get-ChildItem $outDir -Filter *.msi | Remove-Item -Force
+          $wix = Get-ChildItem "C:\Program Files (x86)" -Directory -Filter "WiX Toolset*" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $wixArgs = @()
+          if ($wix) { $wixArgs = @("--wix-toolset-dir", $wix.FullName) }
+          jpackage --type msi --app-image $appImage.FullName --name Skerry --app-version $env:VERSION_NAME --win-menu --win-shortcut --win-per-user-install --resource-dir composeApp/windows --dest $outDir @wixArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Chinese UI strings in MSI
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
+          if (-not $msi) { Write-Error "msi not found"; exit 1 }
+          $bytes = [System.IO.File]::ReadAllBytes($msi.FullName)
+          $text = [System.Text.Encoding]::Unicode.GetString($bytes)
+          foreach ($s in @("下一步", "取消", "完成", "欢迎使用")) {
+            if ($text -notmatch [regex]::Escape($s)) { Write-Error "MSI 缺少中文字符串: $s"; exit 1 }
+          }
+          Write-Host "MSI 中文 UI 验证通过: $($msi.Name)"
+
       - name: Suffix msi and portable zip with the architecture
         # jpackage emits Skerry-<version>.msi with no arch marker; every other desktop
         # asset carries one, and a Windows ARM build would otherwise collide.

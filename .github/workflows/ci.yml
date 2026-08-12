@@ -78,3 +78,63 @@ jobs:
             **/build/test-results/
             **/build/reports/detekt/
           retention-days: 7
+
+  # Windows MSI installer UI localization check: jpackage's own WiX flow cannot take an
+  # overrides.wxs, so the MSI is re-packaged with --resource-dir pointing at composeApp/windows/
+  # (which carries the Simplified Chinese UI strings) and the resulting MSI is grepped for
+  # Chinese dialog text. Runs on every push; release.yml reuses the same recipe for the
+  # published artifact.
+  msi-zh:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install WiX Toolset (jpackage MSI)
+        run: choco install wixtoolset -y --no-progress
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
+
+      - name: Package app image
+        run: ./gradlew :composeApp:createDistributable --stacktrace
+
+      - name: Re-package MSI with Simplified Chinese UI
+        shell: pwsh
+        run: |
+          $appImage = Get-ChildItem "composeApp/build/compose/binaries/main/app" -Directory | Select-Object -First 1
+          if (-not $appImage) { Write-Error "app image not found"; exit 1 }
+          $outDir = "composeApp/build/compose/binaries/main/msi"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          Get-ChildItem $outDir -Filter *.msi | Remove-Item -Force
+          $wix = Get-ChildItem "C:\Program Files (x86)" -Directory -Filter "WiX Toolset*" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $wixArgs = @()
+          if ($wix) { $wixArgs = @("--wix-toolset-dir", $wix.FullName) }
+          $ver = (Select-String -Path gradle.properties -Pattern '^skerry.versionName=(.*)$').Matches.Groups[1].Value
+          jpackage --type msi --app-image $appImage.FullName --name Skerry --app-version $ver --win-menu --win-shortcut --win-per-user-install --resource-dir composeApp/windows --dest $outDir @wixArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Chinese UI strings in MSI
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
+          if (-not $msi) { Write-Error "msi not found"; exit 1 }
+          $bytes = [System.IO.File]::ReadAllBytes($msi.FullName)
+          $text = [System.Text.Encoding]::Unicode.GetString($bytes)
+          foreach ($s in @("下一步", "取消", "完成", "欢迎使用")) {
+            if ($text -notmatch [regex]::Escape($s)) { Write-Error "MSI 缺少中文字符串: $s"; exit 1 }
+          }
+          Write-Host "MSI 中文 UI 验证通过: $($msi.Name)"
+
+      - name: Upload localized MSI
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: skerry-msi-zh
+          path: composeApp/build/compose/binaries/main/msi/*.msi
+          if-no-files-found: ignore
