@@ -124,32 +124,42 @@ jobs:
         # jpackage emits ProductLanguage=1033 (en-US); Windows Installer's basic UI
         # (progress/cancel/error dialogs) follows that product language, which is what makes
         # the installer look English on any system. Rewrite the Product table Language column
-        # to zh-CN directly in the MSI database.
+        # to zh-CN directly in the MSI database via Python's msilib (Windows stdlib).
         shell: pwsh
         run: |
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
           if (-not $msi) { Write-Error "msi not found"; exit 1 }
-          $installer = New-Object -ComObject WindowsInstaller.Installer
-          # msiOpenDatabaseModeDirect = 2; the MSI SQL UPDATE targets the Product table's
-          # Language column (1033 -> 2052 zh-CN), which drives the installer's basic UI text.
-          $db = $installer.OpenDatabase($msi.FullName, 2)
-          $view = $db.OpenView("UPDATE ``Product`` SET ``Language`` = 2052")
-          $view.Execute()
-          $db.Commit()
-          Write-Host "ProductLanguage -> 2052 (zh-CN): $($msi.Name)"
+          $code = @'
+import msilib, sys
+db = msilib.OpenDatabase(sys.argv[1], msilib.MSIDBOPEN_DIRECT)
+view = db.OpenView("UPDATE `Product` SET `Language` = 2052")
+view.Execute(None)
+db.Commit()
+print("ProductLanguage -> 2052 (zh-CN)")
+'@
+          Set-Content -Path fix_msi_lang.py -Value $code
+          python fix_msi_lang.py $msi.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify MSI product language
         shell: pwsh
         run: |
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
-          $installer = New-Object -ComObject WindowsInstaller.Installer
-          $db = $installer.OpenDatabase($msi.FullName, 0)
-          $view = $db.OpenView("SELECT ``Language`` FROM ``Product``")
-          $view.Execute()
-          $rec = $view.Fetch()
-          $lang = $rec.StringData(1)
-          if ($lang -ne "2052") { Write-Error "MSI 语言不是 zh-CN: $lang"; exit 1 }
-          Write-Host "MSI 语言验证通过: $lang (zh-CN)"
+          if (-not $msi) { Write-Error "msi not found"; exit 1 }
+          $code = @'
+import msilib, sys
+db = msilib.OpenDatabase(sys.argv[1], msilib.MSIDBOPEN_READONLY)
+view = db.OpenView("SELECT `Language` FROM `Product`")
+view.Execute(None)
+rec = view.Fetch()
+lang = rec.GetString(1)
+print("Language:", lang)
+sys.exit(0 if lang == "2052" else 1)
+'@
+          Set-Content -Path verify_msi_lang.py -Value $code
+          python verify_msi_lang.py $msi.FullName
+          if ($LASTEXITCODE -ne 0) { Write-Error "MSI 语言不是 zh-CN"; exit 1 }
+          Write-Host "MSI 语言验证通过: 2052 (zh-CN)"
 
       - name: Upload localized MSI
         if: always()
