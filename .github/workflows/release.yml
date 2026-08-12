@@ -193,20 +193,39 @@ jobs:
           # mechanism); the choco WiX install lives under "C:\Program Files (x86)\WiX Toolset v3.x".
           $wix = Get-ChildItem "C:\Program Files (x86)" -Directory -Filter "WiX Toolset*" -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($wix) { $env:PATH = "$($wix.FullName);$env:PATH" }
-          jpackage --type msi --app-image $appImage.FullName --name Skerry --app-version $env:VERSION_NAME --win-menu --win-shortcut --win-per-user-install --resource-dir composeApp/windows --dest $outDir @wixArgs
+          jpackage --type msi --app-image $appImage.FullName --name Skerry --app-version $env:VERSION_NAME --win-menu --win-shortcut --win-per-user-install --dest $outDir
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Verify Chinese UI strings in MSI
+      - name: Set MSI product language to Simplified Chinese (2052)
+        # jpackage emits ProductLanguage=1033 (en-US); Windows Installer's basic UI
+        # (progress/cancel/error dialogs) follows that product language, which is what makes
+        # the installer look English on any system. Rewrite the Product table Language column
+        # to zh-CN directly in the MSI database.
         shell: pwsh
         run: |
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
           if (-not $msi) { Write-Error "msi not found"; exit 1 }
-          $bytes = [System.IO.File]::ReadAllBytes($msi.FullName)
-          $text = [System.Text.Encoding]::Unicode.GetString($bytes)
-          foreach ($s in @("下一步", "取消", "完成", "欢迎使用")) {
-            if ($text -notmatch [regex]::Escape($s)) { Write-Error "MSI 缺少中文字符串: $s"; exit 1 }
-          }
-          Write-Host "MSI 中文 UI 验证通过: $($msi.Name)"
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $invoke = [System.Reflection.BindingFlags]::InvokeMethod
+          $db = $installer.GetType().InvokeMember("OpenDatabase", $invoke, $null, $installer, @($msi.FullName, 1))
+          $view = $db.GetType().InvokeMember("OpenView", $invoke, $null, $db, "UPDATE ``Product`` SET ``Language`` = 2052")
+          $view.GetType().InvokeMember("Execute", $invoke, $null, $view, $null) | Out-Null
+          $db.GetType().InvokeMember("Commit", $invoke, $null, $db, $null) | Out-Null
+          Write-Host "ProductLanguage -> 2052 (zh-CN): $($msi.Name)"
+
+      - name: Verify MSI product language
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $invoke = [System.Reflection.BindingFlags]::InvokeMethod
+          $db = $installer.GetType().InvokeMember("OpenDatabase", $invoke, $null, $installer, @($msi.FullName, 0))
+          $view = $db.GetType().InvokeMember("OpenView", $invoke, $null, $db, "SELECT ``Language`` FROM ``Product``")
+          $view.GetType().InvokeMember("Execute", $invoke, $null, $view, $null) | Out-Null
+          $rec = $view.GetType().InvokeMember("Fetch", $invoke, $null, $view, $null)
+          $lang = $rec.GetType().InvokeMember("StringData", $invoke, $null, $rec, 1)
+          if ($lang -ne "2052") { Write-Error "MSI 语言不是 zh-CN: $lang"; exit 1 }
+          Write-Host "MSI 语言验证通过: $lang (zh-CN)"
 
       - name: Suffix msi and portable zip with the architecture
         # jpackage emits Skerry-<version>.msi with no arch marker; every other desktop
