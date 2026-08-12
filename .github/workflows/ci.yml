@@ -129,7 +129,7 @@ jobs:
         run: |
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
           if (-not $msi) { Write-Error "msi not found"; exit 1 }
-          python -c 'import msilib,sys; db=msilib.OpenDatabase(sys.argv[1],msilib.MSIDBOPEN_DIRECT); v=db.OpenView("UPDATE `Product` SET `Language` = 2052"); v.Execute(None); db.Commit(); print("ProductLanguage -> 2052 (zh-CN)")' $msi.FullName
+          python -c 'import msilib,sys; db=msilib.OpenDatabase(sys.argv[1],msilib.MSIDBOPEN_DIRECT); v=db.OpenView("SELECT * FROM `Product`"); v.Execute(None); names=v.ColumnInfo(msilib.MSICOLINFO_NAMES).split("\t"); idx=names.index("Language")+1; print("Product cols:", names); r=v.Fetch(); r.SetString(idx,"2052"); v.Modify(msilib.MSIMODIFY_UPDATE,r); db.Commit(); print("ProductLanguage -> 2052 (zh-CN)")' $msi.FullName
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify MSI product language
@@ -137,7 +137,7 @@ jobs:
         run: |
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
           if (-not $msi) { Write-Error "msi not found"; exit 1 }
-          python -c 'import msilib,sys; db=msilib.OpenDatabase(sys.argv[1],msilib.MSIDBOPEN_READONLY); v=db.OpenView("SELECT `Language` FROM `Product`"); v.Execute(None); r=v.Fetch(); lang=r.GetString(1); print("Language:", lang); sys.exit(0 if lang=="2052" else 1)' $msi.FullName
+          python -c 'import msilib,sys; db=msilib.OpenDatabase(sys.argv[1],msilib.MSIDBOPEN_READONLY); v=db.OpenView("SELECT * FROM `Product`"); v.Execute(None); names=v.ColumnInfo(msilib.MSICOLINFO_NAMES).split("\t"); idx=names.index("Language")+1; r=v.Fetch(); lang=r.GetString(idx); print("Language:", lang); sys.exit(0 if lang=="2052" else 1)' $msi.FullName
           if ($LASTEXITCODE -ne 0) { Write-Error "MSI 语言不是 zh-CN"; exit 1 }
           Write-Host "MSI 语言验证通过: 2052 (zh-CN)"
 
