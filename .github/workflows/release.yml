@@ -206,11 +206,12 @@ jobs:
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
           if (-not $msi) { Write-Error "msi not found"; exit 1 }
           $installer = New-Object -ComObject WindowsInstaller.Installer
-          $invoke = [System.Reflection.BindingFlags]::InvokeMethod
-          $db = $installer.GetType().InvokeMember("OpenDatabase", $invoke, $null, $installer, @($msi.FullName, 1))
-          $view = $db.GetType().InvokeMember("OpenView", $invoke, $null, $db, "UPDATE ``Product`` SET ``Language`` = 2052")
-          $view.GetType().InvokeMember("Execute", $invoke, $null, $view, $null) | Out-Null
-          $db.GetType().InvokeMember("Commit", $invoke, $null, $db, $null) | Out-Null
+          # msiOpenDatabaseModeDirect = 2; the MSI SQL UPDATE targets the Product table's
+          # Language column (1033 -> 2052 zh-CN), which drives the installer's basic UI text.
+          $db = $installer.OpenDatabase($msi.FullName, 2)
+          $view = $db.OpenView("UPDATE ``Product`` SET ``Language`` = 2052")
+          $view.Execute()
+          $db.Commit()
           Write-Host "ProductLanguage -> 2052 (zh-CN): $($msi.Name)"
 
       - name: Verify MSI product language
@@ -218,12 +219,11 @@ jobs:
         run: |
           $msi = Get-ChildItem "composeApp/build/compose/binaries/main/msi" -Filter *.msi | Select-Object -First 1
           $installer = New-Object -ComObject WindowsInstaller.Installer
-          $invoke = [System.Reflection.BindingFlags]::InvokeMethod
-          $db = $installer.GetType().InvokeMember("OpenDatabase", $invoke, $null, $installer, @($msi.FullName, 0))
-          $view = $db.GetType().InvokeMember("OpenView", $invoke, $null, $db, "SELECT ``Language`` FROM ``Product``")
-          $view.GetType().InvokeMember("Execute", $invoke, $null, $view, $null) | Out-Null
-          $rec = $view.GetType().InvokeMember("Fetch", $invoke, $null, $view, $null)
-          $lang = $rec.GetType().InvokeMember("StringData", $invoke, $null, $rec, 1)
+          $db = $installer.OpenDatabase($msi.FullName, 0)
+          $view = $db.OpenView("SELECT ``Language`` FROM ``Product``")
+          $view.Execute()
+          $rec = $view.Fetch()
+          $lang = $rec.StringData(1)
           if ($lang -ne "2052") { Write-Error "MSI 语言不是 zh-CN: $lang"; exit 1 }
           Write-Host "MSI 语言验证通过: $lang (zh-CN)"
 
